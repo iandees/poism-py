@@ -10,6 +10,7 @@ name = "pypi"
 flask = "*"
 flask-bootstrap = "*"
 requests = "*"
+rauth = "*"
 
 
 [dev-packages]
