@@ -129,6 +129,7 @@ def nearby():
         next_radius=round(radius * 1.8, 4),
     )
 
+
 def parse_xml_obj(xml_obj):
     obj = {
         'obj_id': xml_obj.attrib['id'],
@@ -140,6 +141,7 @@ def parse_xml_obj(xml_obj):
         obj['tags'][t.attrib['k']] = t.attrib['v']
 
     return obj
+
 
 @app.route('/edit/<obj_type>/<int:obj_id>')
 def edit_object(obj_type, obj_id):
@@ -156,4 +158,12 @@ def edit_object(obj_type, obj_id):
     return render_template(
         'edit_object.html',
         obj=obj,
+    )
+
+
+@app.route('/add')
+def add():
+
+    return render_template(
+        'add_object.html',
     )
