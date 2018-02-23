@@ -61,12 +61,12 @@ def callback():
     return redirect(url_for('nearby'))
 
 
-def get_pois_around(lat, lon):
-    radius = 0.001
+def get_pois_around(lat, lon, radius):
     bbox = ','.join(map(str, [
         lat - radius, lon - radius,
         lat + radius, lon + radius
     ]))
+
     overpass_query = """[out:json][timeout:25];(
         node["name"]["leisure"]({bbox});
         way["name"]["leisure"]({bbox});
@@ -108,18 +108,25 @@ def nearby():
     if lon:
         lon = float(lon)
 
+    try:
+        radius = float(request.args.get('d') or 0.001)
+    except:
+        radius = 0.001
+
     if not lat or not lon:
         # Triggers geolocation on the browser
         pois = []
         request_geolocation = True
     else:
-        pois = get_pois_around(lat, lon)
+        pois = get_pois_around(lat, lon, radius)
         request_geolocation = False
 
     return render_template(
         'nearby.html',
         request_geolocation=request_geolocation,
         nearby_items=pois,
+        radius=radius,
+        next_radius=round(radius * 1.8, 4),
     )
 
 @app.route('/edit/<obj_type>/<int:obj_id>')
