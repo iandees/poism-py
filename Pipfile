@@ -11,8 +11,8 @@ flask = "*"
 flask-bootstrap = "*"
 requests = "*"
 rauth = "*"
+gunicorn = "*"
 
 
 [dev-packages]
-gunicorn = "*"
 
