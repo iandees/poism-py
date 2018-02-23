@@ -129,9 +129,31 @@ def nearby():
         next_radius=round(radius * 1.8, 4),
     )
 
+def parse_xml_obj(xml_obj):
+    obj = {
+        'obj_id': xml_obj.attrib['id'],
+        'obj_type': xml_obj.tag,
+        'tags': dict(),
+    }
+
+    for t in xml_obj.findall('./tag'):
+        obj['tags'][t.attrib['k']] = t.attrib['v']
+
+    return obj
+
 @app.route('/edit/<obj_type>/<int:obj_id>')
 def edit_object(obj_type, obj_id):
     if 'user_name' not in session:
         return redirect(url_for('login'))
 
-    return render_template('edit_object.html')
+    if obj_type not in ('node', 'way', 'relation'):
+        return redirect(url_for('index'))
+
+    resp = requests.get('https://www.openstreetmap.org/api/0.6/{}/{}'.format(obj_type, obj_id))
+    root = ET.fromstring(resp.text)
+    obj = parse_xml_obj(root[0])
+
+    return render_template(
+        'edit_object.html',
+        obj=obj,
+    )
