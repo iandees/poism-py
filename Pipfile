@@ -13,4 +13,5 @@ requests = "*"
 
 
 [dev-packages]
+gunicorn = "*"
 
