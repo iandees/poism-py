@@ -1,0 +1,57 @@
+{% extends "_template.html" %}
+
+{% block scripts %}
+{{super()}}
+{% if not loc %}
+<script type="text/javascript">
+    if ("geolocation" in navigator) {
+        /* geolocation is available */
+        var geo_options = {
+            enableHighAccuracy: true,
+            maximumAge: 0,
+            timeout: 10000
+        };
+
+        var geo_success = function(position) {
+            console.log("Found location " + position.coords.latitude + "," + position.coords.longitude + ".");
+            window.location.href = "?lat=" + position.coords.latitude.toFixed(5) + "&lon=" + position.coords.longitude.toFixed(5);
+        }
+        var geo_error = function(err) {
+            console.error("No position available: ");
+            console.error(err);
+            if (err.code === 1) {
+                alert("Please make sure you're using the https version of the site, otherwise I can't get your location.");
+            }
+        }
+
+        navigator.geolocation.getCurrentPosition(geo_success, geo_error, geo_options);
+    } else {
+        /* geolocation IS NOT available */
+        console.log("No geolocation available.");
+    }
+</script>
+{% endif %}
+{% endblock %}
+
+{% block container %}
+{{super()}}
+<div class='page-header'>
+  <h1>POISM</h1>
+</div>
+
+<div class="list-group">
+{% for item in nearby_items %}
+    <a href="{{ url_for('edit_object', obj_type=item['obj_type'], obj_id=item['obj_id']) }}">
+        <h4 class="list-group-item-heading">{{ item['name'] }}</h4>
+        <p class="list-group-item-text">
+            {% for k,v in item['tags'].items() %}
+            <code>{{ k }}={{ v }}</code>,
+            {% endfor %}
+        </p>
+    </a>
+{% else %}
+    <span class="list-group-item list-group-item-danger">Hmm, I couldn't find anything interesting nearby.</span>
+{% endfor %}
+</div>
+
+{% endblock %}
