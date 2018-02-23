@@ -70,6 +70,23 @@ body {
 </style>
 {% endblock %}
 
+{% block navbar %}
+{{ super() }}
+<nav class="navbar navbar-default">
+  <div class="container-fluid">
+    <div class="navbar-header">
+      <a class="navbar-brand" href="{{ url_for('index') }}">POISM</a>
+      {% if session.get('user_name') %}
+      <form class="navbar-form navbar-right" role="logout" action="{{ url_for('logout') }}">
+        <button type="submit" class="btn btn-default">Logout</button>
+      </form>
+      <p class="navbar-text navbar-right">{{ session.get('user_name') }}</p>
+      {% endif %}
+    </div>
+  </div>
+</nav>
+{% endblock %}
+
 {% block body %}
 <div class="container">
 {{ super() }}
