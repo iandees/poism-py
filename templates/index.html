@@ -6,6 +6,10 @@
 </div>
 <h3>Edit points of interest in OpenStreetMap.</h3>
 
+{% if session.get('user_name') %}
+<a href="{{ url_for('nearby') }}" class="btn btn-primary btn-lg active" role="button">Find Nearby POI</a>
+{% else %}
 <a href="{{ url_for('login') }}" class="btn btn-primary btn-lg active" role="button">Login</a>
+{% endif %}
 
 {% endblock %}

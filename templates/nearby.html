@@ -2,7 +2,7 @@
 
 {% block scripts %}
 {{super()}}
-{% if not loc %}
+{% if request_geolocation %}
 <script type="text/javascript">
     if ("geolocation" in navigator) {
         /* geolocation is available */

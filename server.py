@@ -42,6 +42,7 @@ def login():
 def logout():
     session.pop('request_token', None)
     session.pop('request_secret', None)
+    session.pop('user_name', None)
     return redirect('index')
 
 @app.route('/callback')
@@ -107,11 +108,17 @@ def nearby():
     if lon:
         lon = float(lon)
 
-    pois = get_pois_around(lat, lon)
+    if not lat or not lon:
+        # Triggers geolocation on the browser
+        pois = []
+        request_geolocation = True
+    else:
+        pois = get_pois_around(lat, lon)
+        request_geolocation = False
 
     return render_template(
         'nearby.html',
-        loc=(lat, lon),
+        request_geolocation=request_geolocation,
         nearby_items=pois,
     )
 
