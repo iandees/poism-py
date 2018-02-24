@@ -57,6 +57,12 @@
             Expand your search area
         </h4>
     </a>
+    <a class="list-group-item" href="{{ url_for('nearby') }}">
+        <h4 class="list-group-item-heading">
+            <span class="glyphicon glyphicon-refresh" aria-hidden="true"></span>
+            Update your location
+        </h4>
+    </a>
     <a class="list-group-item" href="{{ url_for('add', lat=request.args.get('lat'), lon=request.args.get('lon')) }}">
         <h4 class="list-group-item-heading">
             <span class="glyphicon glyphicon-plus" aria-hidden="true"></span>
