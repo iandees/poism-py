@@ -12,6 +12,7 @@ flask-bootstrap = "*"
 requests = "*"
 rauth = "*"
 gunicorn = "*"
+haversine = "*"
 
 
 [dev-packages]

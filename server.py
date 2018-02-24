@@ -4,6 +4,7 @@ import requests
 import xml.etree.ElementTree as ET
 from flask import Flask, redirect, url_for, session, render_template, request, Response
 from flask_bootstrap import Bootstrap
+from haversine import haversine
 from rauth import OAuth1Service
 
 
@@ -83,15 +84,15 @@ def get_pois_around(lat, lon, radius):
         way["name"]["shop"]({bbox});
         node["name"]["tourism"]({bbox});
         way["name"]["tourism"]({bbox});
-        );out body;""".format(bbox=bbox)
+        );out center body;""".format(bbox=bbox)
     resp = requests.post('https://overpass-api.de/api/interpreter', data=overpass_query)
     resp.raise_for_status()
     data = resp.json()
 
     def translate(obj):
         o = {
-            'obj_type': obj['type'],
-            'obj_id': obj['id'],
+            'type': obj['type'],
+            'id': obj['id'],
             'tags': obj['tags'],
         }
 
@@ -99,9 +100,19 @@ def get_pois_around(lat, lon, radius):
         if name:
             o['name'] = name
 
+        if obj['type'] == 'node':
+            o['center'] = (obj['lon'], obj['lat'])
+        elif obj['type'] == 'way':
+            o['center'] = (obj['center']['lon'], obj['center']['lat'])
+
         return o
 
-    return [translate(o) for o in data['elements']]
+    # Simplify the OSM/Overpass results into something consistent
+    results = [translate(o) for o in data['elements']]
+    # Sort the results by distance from center
+    results.sort(key=lambda i: haversine((lon, lat), i['center']))
+
+    return results
 
 
 @app.route('/edit/nearby')

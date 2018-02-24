@@ -37,7 +37,7 @@
 {{super()}}
 <div class="list-group">
 {% for item in nearby_items %}
-    <a class="list-group-item" href="{{ url_for('edit_object', obj_type=item['obj_type'], obj_id=item['obj_id']) }}">
+    <a class="list-group-item" href="{{ url_for('edit_object', obj_type=item['type'], obj_id=item['id']) }}">
         <h4 class="list-group-item-heading">
             <span class="glyphicon glyphicon-map-marker" aria-hidden="true"></span>
             {{ item['name'] }}
