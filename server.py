@@ -28,6 +28,10 @@ osm = OAuth1Service(
 )
 
 
+class ChangesetClosedException(Exception):
+    pass
+
+
 @app.route('/')
 def index():
     return render_template('index.html')
@@ -193,6 +197,52 @@ def obj_to_xml(obj):
     return elem
 
 
+def open_changeset():
+    token = (session['access_token'], session['access_token_secret'])
+
+    root = ET.Element('osm')
+    root.attrib['version'] = "0.6"
+    root.attrib['generator'] = "poism"
+    cs_elem = ET.SubElement(root, 'changeset')
+    created_by_elem = ET.SubElement(cs_elem, 'tag')
+    created_by_elem.attrib['k'] = 'created_by'
+    created_by_elem.attrib['v'] = 'poism'
+    created_by_elem = ET.SubElement(cs_elem, 'tag')
+    created_by_elem.attrib['k'] = 'comment'
+    created_by_elem.attrib['v'] = 'Modifying a point of interest'
+    cs_text = ET.tostring(root, encoding='unicode')
+
+    sess = osm.get_session(token)
+    resp = sess.put('changeset/create', data=cs_text, headers={'Content-Type': 'text/xml'})
+    app.logger.info("Response from changeset create: %s", resp.text)
+    resp.raise_for_status()
+    changeset_id = int(resp.text)
+
+    return changeset_id
+
+
+def apply_change(new_obj, changeset_id):
+    token = (session['access_token'], session['access_token_secret'])
+
+    root = ET.Element('osmChange')
+    root.attrib['version'] = "0.6"
+    root.attrib['generator'] = "poism"
+    modify_elem = ET.SubElement(root, 'modify')
+    obj_elem = obj_to_xml(new_obj)
+    obj_elem.attrib['changeset'] = str(changeset_id)
+    modify_elem.append(obj_elem)
+    osc_text = ET.tostring(root, encoding='unicode')
+
+    sess = osm.get_session(token)
+    resp = sess.post('changeset/{}/upload'.format(changeset_id), data=osc_text, headers={'Content-Type': 'text/xml'})
+    app.logger.info("Response from changeset upload: %s", resp.text)
+
+    if resp.status_code == 409 and 'was closed at' in resp.text:
+        raise ChangesetClosedException()
+    else:
+        resp.raise_for_status()
+
+
 @app.route('/edit/<obj_type>/<int:obj_id>', methods=['GET', 'POST'])
 def edit_object(obj_type, obj_id):
     if 'user_name' not in session:
@@ -226,44 +276,25 @@ def edit_object(obj_type, obj_id):
             app.logger.info("No change made")
             return redirect(url_for('edit_object', obj_type=obj_type, obj_id=obj_id))
 
-        token = (session['access_token'], session['access_token_secret'])
 
         changeset_id = session.get('changeset_id')
         if not changeset_id:
-            root = ET.Element('osm')
-            root.attrib['version'] = "0.6"
-            root.attrib['generator'] = "poism"
-            cs_elem = ET.SubElement(root, 'changeset')
-            created_by_elem = ET.SubElement(cs_elem, 'tag')
-            created_by_elem.attrib['k'] = 'created_by'
-            created_by_elem.attrib['v'] = 'poism'
-            created_by_elem = ET.SubElement(cs_elem, 'tag')
-            created_by_elem.attrib['k'] = 'comment'
-            created_by_elem.attrib['v'] = 'Modifying a point of interest'
-            cs_text = ET.tostring(root, encoding='unicode')
-
-            sess = osm.get_session(token)
-            resp = sess.put('changeset/create', data=cs_text, headers={'Content-Type': 'text/xml'})
-            app.logger.info("Response from changeset create: %s", resp.text)
-            resp.raise_for_status()
-            changeset_id = int(resp.text)
-            app.logger.info("Created a new changeset with ID %s", changeset_id)
+            changeset_id = open_changeset()
             session['changeset_id'] = changeset_id
+            app.logger.info("Created a new changeset with ID %s", changeset_id)
 
-        root = ET.Element('osmChange')
-        root.attrib['version'] = "0.6"
-        root.attrib['generator'] = "poism"
-        modify_elem = ET.SubElement(root, 'modify')
-        obj_elem = obj_to_xml(new_obj)
-        obj_elem.attrib['changeset'] = str(changeset_id)
-        modify_elem.append(obj_elem)
-        osmc_text = ET.tostring(root, encoding='unicode')
+        try:
+            apply_change(new_obj, changeset_id)
+            app.logger.info("Saved changes to https://osm.org/%s/%s/%s", new_obj['type'], new_obj['id'], new_obj['version'])
+        except ChangesetClosedException:
+            app.logger.info("Changeset %s closed, opening a new one and trying again", changeset_id)
+            session.pop('changeset_id', None)
 
-        sess = osm.get_session(token)
-        resp = sess.post('changeset/{}/upload'.format(changeset_id), data=osmc_text, headers={'Content-Type': 'text/xml'})
-        app.logger.info("Response from changeset upload: %s", resp.text)
-        resp.raise_for_status()
-        app.logger.info("Saved changes to https://osm.org/%s/%s/%s", new_obj['type'], new_obj['id'], new_obj['version'])
+            changeset_id = open_changeset()
+            session['changeset_id'] = changeset_id
+            app.logger.info("Created a new changeset with ID %s", changeset_id)
+
+            apply_change(new_obj, changeset_id)
 
         obj = new_obj
 
