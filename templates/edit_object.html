@@ -1,5 +1,23 @@
 {% extends "_template.html" %}
 
+{% block scripts %}
+{{ super() }}
+<script type="text/javascript">
+    var tags_elem, empty_elem;
+    document.addEventListener("DOMContentLoaded", function(){
+        empty_elem = document.getElementById('empty-row').cloneNode(true);
+        tags_elem = document.getElementById('tags');
+    });
+
+    function addRow() {
+        var new_row_elem = empty_elem.cloneNode(true);
+        new_row_elem.removeAttribute('id');
+        tags_elem.appendChild(new_row_elem);
+        return false;
+    }
+</script>
+{% endblock %}
+
 {% block container %}
 {{super()}}
 
@@ -26,6 +44,7 @@
         </div>
     </div>
     <button type="submit" class="btn btn-default">Save</button>
+    <a class="btn btn-default" onclick="return addRow()">+ Row</button>
 </form>
 
 {% endblock %}
