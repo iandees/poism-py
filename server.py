@@ -43,8 +43,10 @@ def login():
 def logout():
     session.pop('request_token', None)
     session.pop('request_secret', None)
+    session.pop('access_token', None)
+    session.pop('access_token_secret', None)
     session.pop('user_name', None)
-    return redirect('index')
+    return redirect(url_for('index'))
 
 @app.route('/callback')
 def callback():
@@ -53,7 +55,11 @@ def callback():
     if oauth_token != session.get('request_token'):
         return redirect('logout')
 
-    sess = osm.get_auth_session(session['request_token'], session['request_secret'])
+    token = osm.get_access_token(session['request_token'], session['request_secret'])
+    access_token, access_token_secret = token
+    session['access_token'] = access_token
+    session['access_token_secret'] = access_token_secret
+    sess = osm.get_session(token)
     resp = sess.get('user/details')
     root = ET.fromstring(resp.text)
     user_name = root[0].attrib['display_name']
@@ -75,6 +81,8 @@ def get_pois_around(lat, lon, radius):
         way["name"]["amenity"]({bbox});
         node["name"]["shop"]({bbox});
         way["name"]["shop"]({bbox});
+        node["name"]["tourism"]({bbox});
+        way["name"]["tourism"]({bbox});
         );out body;""".format(bbox=bbox)
     resp = requests.post('https://overpass-api.de/api/interpreter', data=overpass_query)
     resp.raise_for_status()
@@ -179,7 +187,7 @@ def edit_object(obj_type, obj_id):
     if 'user_name' not in session:
         return redirect(url_for('login'))
 
-    if obj_type not in ('node', 'way', 'relation'):
+    if obj_type not in ('node', 'way'):
         return redirect(url_for('index'))
 
     resp = requests.get('https://www.openstreetmap.org/api/0.6/{}/{}'.format(obj_type, obj_id))
@@ -193,7 +201,6 @@ def edit_object(obj_type, obj_id):
 
     if request.method == 'POST':
         new_obj = copy.deepcopy(obj)
-        new_obj['version'] += 1
 
         change_made = False
         for k, v in zip(request.form.getlist('keys'), request.form.getlist('values')):
@@ -201,20 +208,51 @@ def edit_object(obj_type, obj_id):
                 continue
             elif new_obj['tags'].get(k) != v:
                 new_obj['tags'][k] = v
-                print("Change made on key %s. From '%s' to '%s'" % (k, obj['tags'].get(k), new_obj['tags'].get(k)))
+                app.logger.info("Change made on key %s. From '%s' to '%s'", k, obj['tags'].get(k), new_obj['tags'].get(k))
                 change_made = True
 
         if not change_made:
-            print("No change made")
+            app.logger.info("No change made")
             return redirect(url_for('edit_object', obj_type=obj_type, obj_id=obj_id))
+
+        token = (session['access_token'], session['access_token_secret'])
+
+        changeset_id = session.get('changeset_id')
+        if not changeset_id:
+            root = ET.Element('osm')
+            root.attrib['version'] = "0.6"
+            root.attrib['generator'] = "poism"
+            cs_elem = ET.SubElement(root, 'changeset')
+            created_by_elem = ET.SubElement(cs_elem, 'tag')
+            created_by_elem.attrib['k'] = 'created_by'
+            created_by_elem.attrib['v'] = 'poism'
+            created_by_elem = ET.SubElement(cs_elem, 'tag')
+            created_by_elem.attrib['k'] = 'comment'
+            created_by_elem.attrib['v'] = 'Modifying a point of interest'
+            cs_text = ET.tostring(root, encoding='unicode')
+
+            sess = osm.get_session(token)
+            resp = sess.put('changeset/create', data=cs_text, headers={'Content-Type': 'text/xml'})
+            app.logger.info("Response from changeset create: %s", resp.text)
+            resp.raise_for_status()
+            changeset_id = int(resp.text)
+            app.logger.info("Created a new changeset with ID %s", changeset_id)
+            session['changeset_id'] = changeset_id
 
         root = ET.Element('osmChange')
         root.attrib['version'] = "0.6"
         root.attrib['generator'] = "poism"
         modify_elem = ET.SubElement(root, 'modify')
-        modify_elem.append(obj_to_xml(new_obj))
+        obj_elem = obj_to_xml(new_obj)
+        obj_elem.attrib['changeset'] = str(changeset_id)
+        modify_elem.append(obj_elem)
+        osmc_text = ET.tostring(root, encoding='unicode')
 
-        print(ET.tostring(root, 'unicode'))
+        sess = osm.get_session(token)
+        resp = sess.post('changeset/{}/upload'.format(changeset_id), data=osmc_text, headers={'Content-Type': 'text/xml'})
+        app.logger.info("Response from changeset upload: %s", resp.text)
+        resp.raise_for_status()
+        app.logger.info("Saved changes to https://osm.org/%s/%s/%s", new_obj['type'], new_obj['id'], new_obj['version'])
 
         obj = new_obj
 
