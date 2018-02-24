@@ -3,4 +3,29 @@
 {% block container %}
 {{super()}}
 
+<form method="post">
+    <input type="hidden" name="version" value="{{ obj['version'] }}"/>
+    <div id="tags">
+        {% for k, v in obj['tags'].items() %}
+        <div class="row">
+            <div class="col-xs-6">
+                <input type="text" class="form-control" name="keys" value="{{ k }}">
+            </div>
+            <div class="col-xs-6">
+                <input type="text" class="form-control" name="values" value="{{ v }}">
+            </div>
+        </div>
+        {% endfor %}
+        <div class="row" id="empty-row">
+            <div class="col-xs-6">
+                <input type="text" class="form-control" name="keys" placeholder="Key">
+            </div>
+            <div class="col-xs-6">
+                <input type="text" class="form-control" name="values" placeholder="Value">
+            </div>
+        </div>
+    </div>
+    <button type="submit" class="btn btn-default">Save</button>
+</form>
+
 {% endblock %}

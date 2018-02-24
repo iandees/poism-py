@@ -50,6 +50,7 @@
     <span class="list-group-item list-group-item-danger">Hmm, I couldn't find anything interesting nearby.</span>
     {% endif %}
 {% endfor %}
+    {% if not request_geolocation %}
     <a class="list-group-item" href="{{ url_for('nearby', lat=request.args.get('lat'), lon=request.args.get('lon'), d=next_radius) }}">
         <h4 class="list-group-item-heading">
             <span class="glyphicon glyphicon-search" aria-hidden="true"></span>
@@ -62,6 +63,7 @@
             Add a missing place
         </h4>
     </a>
+    {% endif %}
 </div>
 
 {% endblock %}

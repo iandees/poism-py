@@ -1,3 +1,4 @@
+import copy
 import os
 import requests
 import xml.etree.ElementTree as ET
@@ -132,18 +133,48 @@ def nearby():
 
 def parse_xml_obj(xml_obj):
     obj = {
-        'obj_id': xml_obj.attrib['id'],
-        'obj_type': xml_obj.tag,
+        'type': xml_obj.tag,
+        'id': int(xml_obj.attrib['id']),
+        'version': int(xml_obj.attrib['version']),
         'tags': dict(),
     }
 
     for t in xml_obj.findall('./tag'):
         obj['tags'][t.attrib['k']] = t.attrib['v']
 
+    if obj['type'] == 'node':
+        obj['lat'] = float(xml_obj.attrib['lat'])
+        obj['lon'] = float(xml_obj.attrib['lon'])
+    elif obj['type'] == 'way':
+        obj['nds'] = []
+        for t in xml_obj.findall('./nd'):
+            obj['nds'].append(t.attrib['ref'])
+
     return obj
 
 
-@app.route('/edit/<obj_type>/<int:obj_id>')
+def obj_to_xml(obj):
+    elem = ET.Element(obj['type'])
+    elem.attrib['id'] = str(obj['id'])
+    elem.attrib['version'] = str(obj['version'])
+
+    for k, v in obj['tags'].items():
+        t = ET.SubElement(elem, 'tag')
+        t.attrib['k'] = k
+        t.attrib['v'] = v
+
+    if obj['type'] == 'node':
+        elem.attrib['lat'] = str(obj['lat'])
+        elem.attrib['lon'] = str(obj['lon'])
+    elif obj['type'] == 'way':
+        for nd in obj['nds']:
+            n = ET.SubElement(elem, 'nd')
+            n.attrib['ref'] = nd
+
+    return elem
+
+
+@app.route('/edit/<obj_type>/<int:obj_id>', methods=['GET', 'POST'])
 def edit_object(obj_type, obj_id):
     if 'user_name' not in session:
         return redirect(url_for('login'))
@@ -152,8 +183,40 @@ def edit_object(obj_type, obj_id):
         return redirect(url_for('index'))
 
     resp = requests.get('https://www.openstreetmap.org/api/0.6/{}/{}'.format(obj_type, obj_id))
+
+    if resp.status_code != 200:
+        app.logger.info("OSM API server returned HTTP %s for %s/%s", resp.status_code, obj_type, obj_id)
+        return redirect(url_for('index'))
+
     root = ET.fromstring(resp.text)
     obj = parse_xml_obj(root[0])
+
+    if request.method == 'POST':
+        new_obj = copy.deepcopy(obj)
+        new_obj['version'] += 1
+
+        change_made = False
+        for k, v in zip(request.form.getlist('keys'), request.form.getlist('values')):
+            if not k and not v:
+                continue
+            elif new_obj['tags'].get(k) != v:
+                new_obj['tags'][k] = v
+                print("Change made on key %s. From '%s' to '%s'" % (k, obj['tags'].get(k), new_obj['tags'].get(k)))
+                change_made = True
+
+        if not change_made:
+            print("No change made")
+            return redirect(url_for('edit_object', obj_type=obj_type, obj_id=obj_id))
+
+        root = ET.Element('osmChange')
+        root.attrib['version'] = "0.6"
+        root.attrib['generator'] = "poism"
+        modify_elem = ET.SubElement(root, 'modify')
+        modify_elem.append(obj_to_xml(new_obj))
+
+        print(ET.tostring(root, 'unicode'))
+
+        obj = new_obj
 
     return render_template(
         'edit_object.html',
