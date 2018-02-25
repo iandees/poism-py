@@ -221,17 +221,18 @@ def open_changeset():
     return changeset_id
 
 
-def apply_change(new_obj, changeset_id):
+def apply_change(new_obj, action, changeset_id):
     token = (session['access_token'], session['access_token_secret'])
 
     root = ET.Element('osmChange')
     root.attrib['version'] = "0.6"
     root.attrib['generator'] = "poism"
-    modify_elem = ET.SubElement(root, 'modify')
+    modify_elem = ET.SubElement(root, action)
     obj_elem = obj_to_xml(new_obj)
     obj_elem.attrib['changeset'] = str(changeset_id)
     modify_elem.append(obj_elem)
     osc_text = ET.tostring(root, encoding='unicode')
+    app.logger.info("Applying change: %s", osc_text)
 
     sess = osm.get_session(token)
     resp = sess.post('changeset/{}/upload'.format(changeset_id), data=osc_text, headers={'Content-Type': 'text/xml'})
@@ -241,6 +242,12 @@ def apply_change(new_obj, changeset_id):
         raise ChangesetClosedException()
     else:
         resp.raise_for_status()
+
+    root = ET.fromstring(resp.text)
+    return {
+        'id': root[0].attrib['new_id'],
+        'version': root[0].attrib['new_version'],
+    }
 
 
 @app.route('/edit/<obj_type>/<int:obj_id>', methods=['GET', 'POST'])
@@ -276,7 +283,6 @@ def edit_object(obj_type, obj_id):
             app.logger.info("No change made")
             return redirect(url_for('edit_object', obj_type=obj_type, obj_id=obj_id))
 
-
         changeset_id = session.get('changeset_id')
         if not changeset_id:
             changeset_id = open_changeset()
@@ -284,7 +290,7 @@ def edit_object(obj_type, obj_id):
             app.logger.info("Created a new changeset with ID %s", changeset_id)
 
         try:
-            apply_change(new_obj, changeset_id)
+            apply_change(new_obj, 'modify', changeset_id)
             app.logger.info("Saved changes to https://osm.org/%s/%s/%s", new_obj['type'], new_obj['id'], new_obj['version'])
         except ChangesetClosedException:
             app.logger.info("Changeset %s closed, opening a new one and trying again", changeset_id)
@@ -294,7 +300,7 @@ def edit_object(obj_type, obj_id):
             session['changeset_id'] = changeset_id
             app.logger.info("Created a new changeset with ID %s", changeset_id)
 
-            apply_change(new_obj, changeset_id)
+            apply_change(new_obj, 'modify', changeset_id)
 
         obj = new_obj
 
@@ -304,9 +310,49 @@ def edit_object(obj_type, obj_id):
     )
 
 
-@app.route('/add')
+@app.route('/add', methods=['GET', 'POST'])
 def add():
+    if 'user_name' not in session:
+        return redirect(url_for('login'))
 
-    return render_template(
-        'add_object.html',
-    )
+    if request.method == 'POST':
+        new_obj = {
+            'type': 'node',
+            'version': 1,
+            'id': -1,
+            'lat': round(float(request.form.get('lat')), 6),
+            'lon': round(float(request.form.get('lon')), 6),
+            'tags': {},
+        }
+
+        for k, v in zip(request.form.getlist('keys'), request.form.getlist('values')):
+            if not k and not v:
+                continue
+            elif new_obj['tags'].get(k) != v:
+                new_obj['tags'][k] = v
+
+        changeset_id = session.get('changeset_id')
+        if not changeset_id:
+            changeset_id = open_changeset()
+            session['changeset_id'] = changeset_id
+            app.logger.info("Created a new changeset with ID %s", changeset_id)
+
+        try:
+            created_obj = apply_change(new_obj, 'create', changeset_id)
+            app.logger.info("Saved changes to https://osm.org/%s/%s/%s", new_obj['type'], new_obj['id'], new_obj['version'])
+        except ChangesetClosedException:
+            app.logger.info("Changeset %s closed, opening a new one and trying again", changeset_id)
+            session.pop('changeset_id', None)
+
+            changeset_id = open_changeset()
+            session['changeset_id'] = changeset_id
+            app.logger.info("Created a new changeset with ID %s", changeset_id)
+
+            created_obj = apply_change(new_obj, 'create', changeset_id)
+
+        return redirect(url_for('edit_object', obj_type='node', obj_id=created_obj['id']))
+
+    else:
+        return render_template(
+            'add_object.html',
+        )
