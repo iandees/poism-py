@@ -74,10 +74,7 @@ def callback():
 
 
 def get_pois_around(lat, lon, radius):
-    bbox = ','.join(map(str, [
-        lat - radius, lon - radius,
-        lat + radius, lon + radius
-    ]))
+    radius = 'around:%d,%0.6f,%0.6f' % (radius, lat, lon)
 
     overpass_query = """[out:json][timeout:25];(
         node["name"]["leisure"]({bbox});
@@ -88,7 +85,7 @@ def get_pois_around(lat, lon, radius):
         way["name"]["shop"]({bbox});
         node["name"]["tourism"]({bbox});
         way["name"]["tourism"]({bbox});
-        );out center body;""".format(bbox=bbox)
+        );out center body;""".format(bbox=radius)
     resp = requests.post('https://overpass-api.de/api/interpreter', data=overpass_query)
     resp.raise_for_status()
     data = resp.json()
@@ -133,9 +130,9 @@ def nearby():
         lon = float(lon)
 
     try:
-        radius = float(request.args.get('d') or 0.001)
+        radius = int(request.args.get('d') or 500)
     except:
-        radius = 0.001
+        radius = 500
 
     if not lat or not lon:
         # Triggers geolocation on the browser
@@ -150,7 +147,7 @@ def nearby():
         request_geolocation=request_geolocation,
         nearby_items=pois,
         radius=radius,
-        next_radius=round(radius * 1.8, 4),
+        next_radius=int(radius * 1.8),
     )
 
 
