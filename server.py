@@ -10,7 +10,7 @@ from rauth import OAuth1Service
 
 app = Flask(__name__)
 app.config.update(
-    SECRET_KEY='just a secret key, to confound the bad guys',
+    SECRET_KEY=os.environ.get('SECRET_KEY', 'secrket key'),
     DEBUG=True,
     OSM_CLIENT_ID=os.environ.get('OSM_CLIENT_ID'),
     OSM_CLIENT_SECRET=os.environ.get('OSM_CLIENT_SECRET'),
@@ -39,6 +39,7 @@ def index():
 @app.route('/login')
 def login():
     request_token, request_token_secret = osm.get_request_token()
+    session.permanent = True
     session['request_token'] = request_token
     session['request_secret'] = request_token_secret
     authorize_url = osm.get_authorize_url(request_token)
