@@ -1,6 +1,14 @@
 {% import "bootstrap/utils.html" as utils %}
 {% extends "bootstrap/base.html" %}
 
+{% block html_attribs %} lang="en"{% endblock %}
+
+{% block metas %}
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+{% endblock %}
+
 {% block title %}POISM - Points of Interest Editor{% endblock %}
 
 {% block styles %}
@@ -72,19 +80,20 @@ body {
 
 {% block navbar %}
 {{ super() }}
-<nav class="navbar navbar-default">
-  <div class="container-fluid">
-    <div class="navbar-header">
-      <a class="navbar-brand" href="{{ url_for('index') }}">POISM</a>
+<div class="header clearfix">
+  <nav>
+    <ul class="nav nav-pills pull-right">
       {% if session.get('user_name') %}
-      <form class="navbar-form navbar-right" role="logout" action="{{ url_for('logout') }}">
-        <button type="submit" class="btn btn-default">Logout</button>
-      </form>
-      <p class="navbar-text navbar-right">{{ session.get('user_name') }}</p>
+      <li role="presentation">
+        <form class="navbar-form navbar-right" role="logout" action="{{ url_for('logout') }}">
+          <button type="submit" class="btn btn-default">Logout {{ session.get('user_name') }}</button>
+        </form>
+      </li>
       {% endif %}
-    </div>
-  </div>
-</nav>
+    </ul>
+  </nav>
+  <h3 class="text-muted"><a href="{{ url_for('index') }}">POISM</a></h3>
+</div>
 {% endblock %}
 
 {% block body %}
