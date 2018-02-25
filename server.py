@@ -11,7 +11,6 @@ from rauth import OAuth1Service
 app = Flask(__name__)
 app.config.update(
     SECRET_KEY=os.environ.get('SECRET_KEY', 'secrket key'),
-    DEBUG=True,
     OSM_CLIENT_ID=os.environ.get('OSM_CLIENT_ID'),
     OSM_CLIENT_SECRET=os.environ.get('OSM_CLIENT_SECRET'),
 )
