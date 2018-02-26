@@ -2,7 +2,7 @@ import copy
 import os
 import requests
 import xml.etree.ElementTree as ET
-from flask import Flask, redirect, url_for, session, render_template, request, Response
+from flask import Flask, jsonify, redirect, url_for, session, render_template, request, Response
 from flask_bootstrap import Bootstrap
 from haversine import haversine
 from rauth import OAuth1Service
@@ -245,6 +245,85 @@ def apply_change(new_obj, action, changeset_id):
         'id': root[0].attrib['new_id'],
         'version': root[0].attrib['new_version'],
     }
+
+
+@app.route('/<obj_type>/<int:obj_id>.geojson')
+def object_as_geojson(obj_type, obj_id):
+    if 'user_name' not in session:
+        return redirect(url_for('login'))
+
+    if obj_type not in ('node', 'way'):
+        return jsonify({'error': "Don't know how to build geojson for that type yet. Try node or way."}), 400
+
+    if obj_type == 'way':
+        resp = requests.get('https://www.openstreetmap.org/api/0.6/way/%d/full' % obj_id)
+    elif obj_type == 'node':
+        resp = requests.get('https://www.openstreetmap.org/api/0.6/node/%d' % obj_id)
+
+    if resp.status_code == 404:
+        return jsonify({'error': "That object doesn't exist."}), 404
+    elif resp.status_code == 410:
+        return jsonify({'error': "That object was deleted."}), 410
+    elif resp.status_code != 200:
+        return jsonify({'error': resp.text}), resp.status_code
+
+    xml_resp = ET.fromstring(resp.text)
+
+    feature = {
+        'type': "Feature",
+        'properties': {},
+        'geometry': {},
+    }
+    if obj_type == 'way':
+        thing = xml_resp.find('./way')
+
+        # Build node cache
+        nds = dict([
+            (n.attrib['id'], (float(n.attrib['lon']), float(n.attrib['lat'])))
+            for n in xml_resp.findall('./node')
+        ])
+
+        # Build the polyline or polygon
+        coords = [
+            nds[nd_ref.attrib['ref']]
+            for nd_ref in thing.findall('./nd')
+        ]
+
+        # Rudimentary check to see if it's an area
+        tags = dict([(t.attrib['k'], t.attrib['v']) for t in thing.findall('./tag')])
+        if tags.get('area') == 'yes' or tags.get('building'):
+            poly_or_linestring = 'Polygon'
+            coords = [coords]
+        else:
+            poly_or_linestring = 'LineString'
+
+        feature['geometry'] = {
+            'type': poly_or_linestring,
+            'coordinates': coords,
+        }
+    elif obj_type == 'node':
+        thing = xml_resp.find('./node')
+
+        feature['geometry'] = {
+            'type': "Point",
+            'coordinates': [
+                float(thing.attrib['lon']),
+                float(thing.attrib['lat']),
+            ]
+        }
+
+    feature['properties'] = {
+        'id': int(thing.attrib['id']),
+        'visible': thing.attrib['visible'] == 'true',
+        'version': int(thing.attrib['version']),
+        'changeset': int(thing.attrib['changeset']),
+        'timestamp': thing.attrib['timestamp'],
+        'user': thing.attrib['user'],
+        'uid': int(thing.attrib['uid']),
+        'tags': dict([(t.attrib['k'], t.attrib['v']) for t in thing.findall('./tag')]),
+    }
+
+    return jsonify(feature)
 
 
 @app.route('/edit/<obj_type>/<int:obj_id>', methods=['GET', 'POST'])
