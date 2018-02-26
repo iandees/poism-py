@@ -82,6 +82,8 @@
 {% block container %}
 {{super()}}
 
+<p><a href="{{ url_for('nearby', lat=request.args.get('lat'), lon=request.args.get('lon')) }}">← Back to nearby places</a></p>
+
 <div id="map" class="col-xs-12" style="height: 380px; margin-bottom: 20px;"></div>
 
 <form method="post">
