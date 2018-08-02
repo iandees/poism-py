@@ -130,7 +130,7 @@ def nearby():
         lon = float(lon)
 
     try:
-        radius = int(request.args.get('d') or 500)
+        radius = int(request.args.get('d') or 50)
     except:
         radius = 500
 
