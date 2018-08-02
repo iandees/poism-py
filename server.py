@@ -247,6 +247,51 @@ def apply_change(new_obj, action, changeset_id):
     }
 
 
+@app.route('/pois_around.geojson')
+def pois_around():
+    if 'user_name' not in session:
+        return redirect(url_for('login'))
+
+    lat = request.args.get('lat')
+    if lat:
+        lat = float(lat)
+
+    lon = request.args.get('lon')
+    if lon:
+        lon = float(lon)
+
+    if not (lat or lon):
+        return jsonify({'error': "lat and lon are required"}), 400
+
+    try:
+        radius = int(request.args.get('d') or 50)
+    except:
+        radius = 500
+
+    if radius > 1000:
+        radius = 1000
+
+    pois = get_pois_around(lat, lon, radius)
+    print(len(pois))
+
+    fc = {
+        'type': "FeatureCollection",
+        'features': []
+    }
+
+    for p in pois:
+        fc['features'].append({
+            'id': "https://osm.org/%s/%s/" % (p['type'], p['id']),
+            'type': "Feature",
+            'geometry': {'type': "Point", 'coordinates': p['center']},
+            'properties': {
+                'name': p['name']
+            }
+        })
+
+    return jsonify(fc)
+
+
 @app.route('/<obj_type>/<int:obj_id>.geojson')
 def object_as_geojson(obj_type, obj_id):
     if 'user_name' not in session:
