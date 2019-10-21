@@ -83,30 +83,75 @@
 
 <div id="map" class="col-xs-12" style="height: 380px; margin-bottom: 20px;"></div>
 
+<h3>
+    {% if preset.icon.startswith('maki-') %}
+    <img width="40" src="https://cdn.jsdelivr.net/gh/mapbox/maki/icons/{{ preset.icon[5:] }}-15.svg"/>
+    {% elif preset.icon.startswith('fas-') %}
+    <img width="40" src="https://cdn.jsdelivr.net/gh/openstreetmap/iD@master/svg/fontawesome/{{ preset.icon }}.svg"/>
+    {% elif preset.icon.startswith('temaki-') %}
+    <img width="40" src="https://cdn.jsdelivr.net/gh/bhousel/temaki/icons/{{ preset.icon[7:] }}.svg"/>
+    {% endif %}
+    {{ preset.name }}
+</h3>
+
 <form method="post">
-    <input type="hidden" name="version" value="{{ obj['version'] }}"/>
-    <div id="tags">
-        {% for k, v in obj['tags'].items() %}
-        <div class="row">
-            <div class="col-xs-6">
-                <input type="text" class="form-control" name="keys" value="{{ k }}">
-            </div>
-            <div class="col-xs-6">
-                <input type="text" class="form-control" name="values" value="{{ v }}">
-            </div>
+    {{ form.hidden_tag() }}
+
+    {% if 'name' in fields %}
+    <div class="form-group">
+        <label for="name">Name</label>
+        {{ form.name(class_="form-control") }}
+    </div>
+    {% endif %}
+
+    {% if 'phone' in fields %}
+    <div class="form-group">
+        <label for="name">Phone</label>
+        {{ form.phone(type="tel", class_="form-control") }}
+    </div>
+    {% endif %}
+
+    {% if 'address' in fields %}
+    <legend>Address Details</legend>
+
+    <div class="row">
+        <div class="form-group col-xs-3">
+            <label for="addr_housenumber">Housenumber</label>
+            {{ form.addr_housenumber(class_="form-control") }}
         </div>
-        {% endfor %}
-        <div class="row" id="empty-row">
-            <div class="col-xs-6">
-                <input type="text" class="form-control" name="keys" placeholder="Key">
-            </div>
-            <div class="col-xs-6">
-                <input type="text" class="form-control" name="values" placeholder="Value">
-            </div>
+        <div class="form-group col-xs-9">
+            <label for="addr_street">Street</label>
+            {{ form.addr_street(class_="form-control") }}
         </div>
     </div>
-    <button type="submit" class="btn btn-default">Save</button>
-    <a class="btn btn-default" onclick="return addRow()">+ Row</a>
+
+    <div class="row">
+        <div class="form-group col-xs-6">
+            <label for="addr_city">City</label>
+            {{ form.addr_city(class_="form-control") }}
+        </div>
+        <div class="form-group col-xs-3">
+            <label for="addr_state">State</label>
+            {{ form.addr_state(class_="form-control") }}
+        </div>
+        <div class="form-group col-xs-3">
+            <label for="addr_postcode">Zipcode</label>
+            {{ form.addr_postcode(class_="form-control") }}
+        </div>
+    </div>
+    {% endif %}
+
+    {% if 'opening_hours' in fields %}
+    <legend>Opening Hours</legend>
+
+    <div class="row">
+        <div class="form-group col-xs-12">
+            {{ form.opening_hours_complex(class_="form-control") }}
+        </div>
+    </div>
+    {% endif %}
+
+    {{ form.submit(class_="btn btn-default") }}
 </form>
 
 {% endblock %}

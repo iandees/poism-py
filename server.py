@@ -1,11 +1,16 @@
 import copy
 import os
+import re
 import requests
 import xml.etree.ElementTree as ET
 from flask import Flask, jsonify, redirect, url_for, session, render_template, request, Response
 from flask_bootstrap import Bootstrap
+from flask_wtf import FlaskForm
+from wtforms import StringField, PasswordField, BooleanField, SubmitField
+from wtforms.validators import DataRequired
 from haversine import haversine
 from rauth import OAuth1Service
+from osm_presets import OSMPresets
 
 
 app = Flask(__name__)
@@ -15,6 +20,10 @@ app.config.update(
     OSM_CLIENT_SECRET=os.environ.get('OSM_CLIENT_SECRET'),
 )
 Bootstrap(app)
+
+presets = OSMPresets()
+presets.load_presets()
+# simple_hours_re = re.compile('')
 
 osm = OAuth1Service(
     name='osm',
@@ -29,6 +38,19 @@ osm = OAuth1Service(
 
 class ChangesetClosedException(Exception):
     pass
+
+
+class PoiForm(FlaskForm):
+    name = StringField("Name")
+    addr_housenumber = StringField("House Number")
+    addr_street = StringField("Street")
+    addr_city = StringField("City")
+    addr_state = StringField("State")
+    addr_postcode = StringField("Postcode")
+    phone = StringField("Phone")
+    website = StringField("Website")
+    opening_hours_complex = StringField("Opening Hours")
+    submit = SubmitField("Save")
 
 
 @app.route('/')
@@ -272,7 +294,6 @@ def pois_around():
         radius = 1000
 
     pois = get_pois_around(lat, lon, radius)
-    print(len(pois))
 
     fc = {
         'type': "FeatureCollection",
@@ -387,47 +408,91 @@ def edit_object(obj_type, obj_id):
 
     root = ET.fromstring(resp.text)
     obj = parse_xml_obj(root[0])
+    obj_tags = obj['tags']
 
-    if request.method == 'POST':
+    form = PoiForm()
+
+    preset = presets.match_by_tags(obj_tags)
+    if preset:
+        app.logger.info("Matches preset %s", preset)
+
+        fields = preset.get('fields')
+        fields.extend(preset.get('moreFields', []))
+
+        if 'name' in fields:
+            form.name.data = obj_tags.get('name')
+
+        if 'address' in fields:
+            form.addr_housenumber.data = obj_tags.get('addr:housenumber')
+            form.addr_street.data = obj_tags.get('addr:street')
+            form.addr_city.data = obj_tags.get('addr:city')
+            form.addr_state.data = obj_tags.get('addr:state')
+            form.addr_postcode.data = obj_tags.get('addr:postcode')
+
+        if 'phone' in fields:
+            form.phone.data = obj_tags.get('phone')
+
+        if 'website' in fields:
+            form.website.data = obj_tags.get('website')
+
+        if 'opening_hours' in fields:
+            opening_hours = obj_tags.get('opening_hours')
+            form.opening_hours_complex.data = opening_hours
+
+    if form.validate_on_submit():
         new_obj = copy.deepcopy(obj)
 
-        change_made = False
-        for k, v in zip(request.form.getlist('keys'), request.form.getlist('values')):
-            if not k and not v:
-                continue
-            elif new_obj['tags'].get(k) != v:
-                new_obj['tags'][k] = v
-                app.logger.info("Change made on key %s. From '%s' to '%s'", k, obj['tags'].get(k), new_obj['tags'].get(k))
-                change_made = True
+        if 'name' in fields:
+            new_obj['tags']['name'] = form.name.data
 
-        if not change_made:
-            app.logger.info("No change made")
-            return redirect(url_for('edit_object', obj_type=obj_type, obj_id=obj_id))
+        if 'address' in fields:
+            new_obj['tags']['addr:housenumber'] = form.addr_housenumber.data
+            new_obj['tags']['addr:street'] = form.addr_street.data
+            new_obj['tags']['addr:city'] = form.addr_city.data
+            new_obj['tags']['addr:state'] = form.addr_state.data
+            new_obj['tags']['addr:postcode'] = form.addr_postcode.data
 
-        changeset_id = session.get('changeset_id')
-        if not changeset_id:
-            changeset_id = open_changeset()
-            session['changeset_id'] = changeset_id
-            app.logger.info("Created a new changeset with ID %s", changeset_id)
+        if 'phone' in fields:
+            new_obj['tags']['phone'] = form.phone.data
 
-        try:
-            apply_change(new_obj, 'modify', changeset_id)
-            app.logger.info("Saved changes to https://osm.org/%s/%s/%s", new_obj['type'], new_obj['id'], new_obj['version'])
-        except ChangesetClosedException:
-            app.logger.info("Changeset %s closed, opening a new one and trying again", changeset_id)
-            session.pop('changeset_id', None)
+        if 'website' in fields:
+            new_obj['tags']['website'] = form.website.data
 
-            changeset_id = open_changeset()
-            session['changeset_id'] = changeset_id
-            app.logger.info("Created a new changeset with ID %s", changeset_id)
+        # Clear out tags that are empty
+        for k, v in new_obj['tags'].items():
+            if not v:
+                del new_obj['tags'][k]
 
-            apply_change(new_obj, 'modify', changeset_id)
+        if dry_run:
+            app.logger.info("Would write %s", new_obj)
+        else:
+            changeset_id = session.get('changeset_id')
+            if not changeset_id:
+                changeset_id = open_changeset()
+                session['changeset_id'] = changeset_id
+                app.logger.info("Created a new changeset with ID %s", changeset_id)
 
-        obj = new_obj
+            try:
+                apply_change(new_obj, 'modify', changeset_id)
+                app.logger.info("Saved changes to https://osm.org/%s/%s/%s", new_obj['type'], new_obj['id'], new_obj['version'])
+            except ChangesetClosedException:
+                app.logger.info("Changeset %s closed, opening a new one and trying again", changeset_id)
+                session.pop('changeset_id', None)
+
+                changeset_id = open_changeset()
+                session['changeset_id'] = changeset_id
+                app.logger.info("Created a new changeset with ID %s", changeset_id)
+
+                apply_change(new_obj, 'modify', changeset_id)
+
+            obj = new_obj
 
     return render_template(
         'edit_object.html',
+        form=form,
         obj=obj,
+        fields=fields,
+        preset=preset,
     )
 
 
