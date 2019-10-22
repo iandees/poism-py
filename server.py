@@ -23,7 +23,6 @@ Bootstrap(app)
 
 presets = OSMPresets()
 presets.load_presets()
-# simple_hours_re = re.compile('')
 
 osm = OAuth1Service(
     name='osm',
@@ -459,33 +458,30 @@ def edit_object(obj_type, obj_id):
             new_obj['tags']['website'] = form.website.data
 
         # Clear out tags that are empty
-        for k, v in new_obj['tags'].items():
-            if not v:
-                del new_obj['tags'][k]
+        empty_keys = [k for k,v in new_obj['tags'].items() if v is None]
+        for k in empty_keys:
+            del new_obj['tags'][k]
 
-        if dry_run:
-            app.logger.info("Would write %s", new_obj)
-        else:
-            changeset_id = session.get('changeset_id')
-            if not changeset_id:
-                changeset_id = open_changeset()
-                session['changeset_id'] = changeset_id
-                app.logger.info("Created a new changeset with ID %s", changeset_id)
+        changeset_id = session.get('changeset_id')
+        if not changeset_id:
+            changeset_id = open_changeset()
+            session['changeset_id'] = changeset_id
+            app.logger.info("Created a new changeset with ID %s", changeset_id)
 
-            try:
-                apply_change(new_obj, 'modify', changeset_id)
-                app.logger.info("Saved changes to https://osm.org/%s/%s/%s", new_obj['type'], new_obj['id'], new_obj['version'])
-            except ChangesetClosedException:
-                app.logger.info("Changeset %s closed, opening a new one and trying again", changeset_id)
-                session.pop('changeset_id', None)
+        try:
+            apply_change(new_obj, 'modify', changeset_id)
+            app.logger.info("Saved changes to https://osm.org/%s/%s/%s", new_obj['type'], new_obj['id'], new_obj['version'])
+        except ChangesetClosedException:
+            app.logger.info("Changeset %s closed, opening a new one and trying again", changeset_id)
+            session.pop('changeset_id', None)
 
-                changeset_id = open_changeset()
-                session['changeset_id'] = changeset_id
-                app.logger.info("Created a new changeset with ID %s", changeset_id)
+            changeset_id = open_changeset()
+            session['changeset_id'] = changeset_id
+            app.logger.info("Created a new changeset with ID %s", changeset_id)
 
-                apply_change(new_obj, 'modify', changeset_id)
+            apply_change(new_obj, 'modify', changeset_id)
 
-            obj = new_obj
+        obj = new_obj
 
     return render_template(
         'edit_object.html',
