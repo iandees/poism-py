@@ -457,6 +457,9 @@ def edit_object(obj_type, obj_id):
         if 'website' in fields:
             new_obj['tags']['website'] = form.website.data
 
+        if 'opening_hours' in fields:
+            new_obj['tags']['opening_hours'] = form.opening_hours.data
+
         # Clear out tags that are empty
         empty_keys = [k for k,v in new_obj['tags'].items() if v is None]
         for k in empty_keys:
