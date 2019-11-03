@@ -412,11 +412,13 @@ def edit_object(obj_type, obj_id):
     form = PoiForm()
 
     preset = presets.match_by_tags(obj_tags)
+    fields = []
     if preset:
-        app.logger.info("Matches preset %s", preset)
-
         fields = preset.get('fields')
         fields.extend(preset.get('moreFields', []))
+        app.logger.info("Matches preset %s with fields %s", preset['name'], fields)
+
+    if request.method == 'GET':
 
         if 'name' in fields:
             form.name.data = obj_tags.get('name')
@@ -458,7 +460,7 @@ def edit_object(obj_type, obj_id):
             new_obj['tags']['website'] = form.website.data
 
         if 'opening_hours' in fields:
-            new_obj['tags']['opening_hours'] = form.opening_hours.data
+            new_obj['tags']['opening_hours'] = form.opening_hours_complex.data
 
         # Clear out tags that are empty
         empty_keys = [k for k,v in new_obj['tags'].items() if v is None]

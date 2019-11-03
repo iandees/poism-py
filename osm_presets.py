@@ -12,15 +12,23 @@ class OSMPresets(object):
         self._populate_parents()
 
     def _populate_parents(self):
-        """ Presets with no 'fields' attribute should pull their fields from the parent preset. """
+        """ Popuate implied presets and referential relationships. """
         for name, data in self.presets.items():
             fields = data.get('fields', [])
 
             if not fields:
+                # Presets with no 'fields' attribute should pull their fields from the parent preset.
                 parent_preset_name = name.rsplit('/', 1)[0]
                 parent_preset = self.presets.get(parent_preset_name)
                 if parent_preset:
                     data['fields'] = parent_preset.get('fields')
+            else:
+                # Fields with {} surrounding the name should be replaced with the fields from the named preset
+                for i, p in enumerate(data['fields']):
+                    if p[0] == '{' and p[-1] == '}':
+                        referred_preset = self.presets.get(p[1:-1])
+                        if referred_preset:
+                            data['fields'][i] = referred_preset['fields']
 
     def match_by_tags(self, tags):
         candidates = []
