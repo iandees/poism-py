@@ -1,13 +1,11 @@
 import copy
 import os
-import re
 import requests
 import xml.etree.ElementTree as ET
-from flask import Flask, jsonify, redirect, url_for, session, render_template, request, Response
+from flask import Flask, jsonify, redirect, url_for, session, render_template, request
 from flask_bootstrap import Bootstrap
 from flask_wtf import FlaskForm
-from wtforms import StringField, PasswordField, BooleanField, SubmitField
-from wtforms.validators import DataRequired
+from wtforms import StringField, SubmitField
 from haversine import haversine
 from rauth import OAuth1Service
 from osm_presets import OSMPresets
@@ -56,6 +54,7 @@ class PoiForm(FlaskForm):
 def index():
     return render_template('index.html')
 
+
 @app.route('/login')
 def login():
     request_token, request_token_secret = osm.get_request_token()
@@ -65,6 +64,7 @@ def login():
     authorize_url = osm.get_authorize_url(request_token)
     return redirect(authorize_url)
 
+
 @app.route('/logout')
 def logout():
     session.pop('request_token', None)
@@ -73,6 +73,7 @@ def logout():
     session.pop('access_token_secret', None)
     session.pop('user_name', None)
     return redirect(url_for('index'))
+
 
 @app.route('/callback')
 def callback():
