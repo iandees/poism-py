@@ -28,7 +28,8 @@ class OSMPresets(object):
                     if p[0] == '{' and p[-1] == '}':
                         referred_preset = self.presets.get(p[1:-1])
                         if referred_preset:
-                            data['fields'][i] = referred_preset['fields']
+                            del data['fields'][i]
+                            data['fields'][i:i] = referred_preset['fields']
 
     def match_by_tags(self, tags):
         candidates = []
@@ -53,6 +54,7 @@ class OSMPresets(object):
             return sorted(candidates, key=lambda i: i[0], reverse=True)[0][1]
         else:
             return None
+
 
 if __name__ == "__main__":
     p = OSMPresets()
