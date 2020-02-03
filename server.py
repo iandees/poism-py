@@ -412,7 +412,6 @@ def edit_object(obj_type, obj_id):
     fields = []
     if preset:
         fields = preset.get('fields')
-        fields.extend(preset.get('moreFields', []))
         app.logger.info("Matches preset %s with fields %s", preset['name'], fields)
 
     if request.method == 'GET':
