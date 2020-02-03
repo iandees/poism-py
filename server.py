@@ -92,7 +92,9 @@ def callback():
     user_name = root[0].attrib['display_name']
     session['user_name'] = user_name
 
-    return redirect(url_for('nearby'))
+    next_url = session.pop('next', None) or url_for('nearby')
+
+    return redirect(next_url)
 
 
 def get_pois_around(lat, lon, radius):
@@ -391,6 +393,10 @@ def object_as_geojson(obj_type, obj_id):
 
 @app.route('/edit/<obj_type>/<int:obj_id>', methods=['GET', 'POST'])
 def edit_object(obj_type, obj_id):
+    if 'user_name' not in session:
+        session['next'] = request.url
+        return redirect(url_for('login'))
+
     if obj_type not in ('node', 'way'):
         return redirect(url_for('index'))
 
@@ -435,9 +441,6 @@ def edit_object(obj_type, obj_id):
             form.opening_hours_complex.data = opening_hours
 
     if form.validate_on_submit():
-        if 'user_name' not in session:
-            return redirect(url_for('login'))
-
         new_obj = copy.deepcopy(obj)
 
         if 'name' in fields:
