@@ -50,8 +50,16 @@
     <span class="list-group-item list-group-item-danger">Hmm, I couldn't find anything interesting nearby.</span>
     {% endif %}
 {% endfor %}
-    {% if not request_geolocation %}
-    <a class="list-group-item" href="{{ url_for('nearby', lat=request.args.get('lat'), lon=request.args.get('lon'), d=next_radius) }}">
+    {%- if not request_geolocation %}
+    {%- if nearby_items|length == limit %}
+    <a class="list-group-item" href="{{ url_for('nearby', lat=request.args.get('lat'), lon=request.args.get('lon'), d=radius, l=next_limit) }}">
+        <h4 class="list-group-item-heading">
+            <span class="glyphicon glyphicon-search" aria-hidden="true"></span>
+            Load more...
+        </h4>
+    </a>
+    {%- endif %}
+    <a class="list-group-item" href="{{ url_for('nearby', lat=request.args.get('lat'), lon=request.args.get('lon'), d=next_radius, l=limit) }}">
         <h4 class="list-group-item-heading">
             <span class="glyphicon glyphicon-search" aria-hidden="true"></span>
             Expand your search area

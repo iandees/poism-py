@@ -145,18 +145,10 @@ def nearby():
     if 'user_name' not in session:
         return redirect(url_for('login'))
 
-    lat = request.args.get('lat')
-    if lat:
-        lat = float(lat)
-
-    lon = request.args.get('lon')
-    if lon:
-        lon = float(lon)
-
-    try:
-        radius = int(request.args.get('d') or 50)
-    except:
-        radius = 500
+    lat = request.args.get('lat', type=float)
+    lon = request.args.get('lon', type=float)
+    radius = request.args.get('d', 150, type=int)
+    limit = request.args.get('l', 15, type=int)
 
     if not lat or not lon:
         # Triggers geolocation on the browser
@@ -169,9 +161,11 @@ def nearby():
     return render_template(
         'nearby.html',
         request_geolocation=request_geolocation,
-        nearby_items=pois,
+        nearby_items=pois[:limit],
         radius=radius,
         next_radius=int(radius * 1.8),
+        limit=limit,
+        next_limit=int(limit * 1.8),
     )
 
 
@@ -276,20 +270,15 @@ def pois_around():
     if 'user_name' not in session:
         return redirect(url_for('login'))
 
-    lat = request.args.get('lat')
-    if lat:
-        lat = float(lat)
-
-    lon = request.args.get('lon')
-    if lon:
-        lon = float(lon)
+    lat = request.args.get('lat', type=float)
+    lon = request.args.get('lon', type=float)
 
     if not (lat or lon):
         return jsonify({'error': "lat and lon are required"}), 400
 
     try:
-        radius = int(request.args.get('d') or 50)
-    except:
+        radius = request.args.get('d', 125, type=int)
+    except Exception:
         radius = 500
 
     if radius > 1000:
@@ -341,6 +330,7 @@ def object_as_geojson(obj_type, obj_id):
     }
     if obj_type == 'way':
         thing = xml_resp.find('./way')
+        tags = dict([(t.attrib['k'], t.attrib['v']) for t in thing.findall('./tag')])
 
         # Build node cache
         nds = dict([
@@ -355,7 +345,6 @@ def object_as_geojson(obj_type, obj_id):
         ]
 
         # Rudimentary check to see if it's an area
-        tags = dict([(t.attrib['k'], t.attrib['v']) for t in thing.findall('./tag')])
         if tags.get('area') == 'yes' or tags.get('building'):
             poly_or_linestring = 'Polygon'
             coords = [coords]
@@ -368,6 +357,7 @@ def object_as_geojson(obj_type, obj_id):
         }
     elif obj_type == 'node':
         thing = xml_resp.find('./node')
+        tags = dict([(t.attrib['k'], t.attrib['v']) for t in thing.findall('./tag')])
 
         feature['geometry'] = {
             'type': "Point",
@@ -385,7 +375,7 @@ def object_as_geojson(obj_type, obj_id):
         'timestamp': thing.attrib['timestamp'],
         'user': thing.attrib['user'],
         'uid': int(thing.attrib['uid']),
-        'tags': dict([(t.attrib['k'], t.attrib['v']) for t in thing.findall('./tag')]),
+        'tags': tags,
     }
 
     return jsonify(feature)
@@ -463,7 +453,7 @@ def edit_object(obj_type, obj_id):
             new_obj['tags']['opening_hours'] = form.opening_hours_complex.data
 
         # Clear out tags that are empty
-        empty_keys = [k for k,v in new_obj['tags'].items() if v is None]
+        empty_keys = [k for k, v in new_obj['tags'].items() if v is None]
         for k in empty_keys:
             del new_obj['tags'][k]
 
