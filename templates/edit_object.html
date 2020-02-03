@@ -43,9 +43,9 @@
         }
         L.control.layers(baseMaps).addTo(map);
 
-        geojsonLayer = new L.GeoJSON.AJAX("{{ url_for('object_as_geojson', obj_type=obj['type'], obj_id=obj['id']) }}");
-        geojsonLayer.addTo(map);
+        var geojsonLayer = new L.GeoJSON.AJAX("{{ url_for('object_as_geojson', obj_type=obj['type'], obj_id=obj['id']) }}");
         geojsonLayer.on('data:loaded', function(e) {
+            geojsonLayer.addTo(map);
             map.fitBounds(geojsonLayer.getBounds());
         });
 
@@ -56,6 +56,7 @@
                 gpsCircle = L.circle(e.latlng, radius).addTo(map);
             } else {
                 gpsCircle.setLatLng(e.latlng);
+                gpsCircle.setRadius(radius);
             }
         });
     });
