@@ -314,9 +314,6 @@ def pois_around():
 
 @app.route('/<obj_type>/<int:obj_id>.geojson')
 def object_as_geojson(obj_type, obj_id):
-    if 'user_name' not in session:
-        return redirect(url_for('login'))
-
     if obj_type not in ('node', 'way'):
         return jsonify({'error': "Don't know how to build geojson for that type yet. Try node or way."}), 400
 
