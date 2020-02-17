@@ -99,10 +99,12 @@ def get_pois_around(lat, lon, radius):
     radius = 'around:%d,%0.6f,%0.6f' % (radius, lat, lon)
 
     overpass_query = """[out:json][timeout:25];(
-        node["name"]["leisure"]({bbox});
-        way["name"]["leisure"]({bbox});
         node["name"]["amenity"]({bbox});
         way["name"]["amenity"]({bbox});
+        node["name"]["craft"]({bbox});
+        way["name"]["craft"]({bbox});
+        node["name"]["leisure"]({bbox});
+        way["name"]["leisure"]({bbox});
         node["name"]["shop"]({bbox});
         way["name"]["shop"]({bbox});
         node["name"]["tourism"]({bbox});
