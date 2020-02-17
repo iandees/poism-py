@@ -16,20 +16,24 @@ class OSMPresets(object):
         for name, data in self.presets.items():
             fields = data.get('fields', [])
 
+            # Presets with no 'fields' attribute should pull their fields from the parent preset.
             if not fields:
-                # Presets with no 'fields' attribute should pull their fields from the parent preset.
                 parent_preset_name = name.rsplit('/', 1)[0]
                 parent_preset = self.presets.get(parent_preset_name)
                 if parent_preset:
                     data['fields'] = parent_preset.get('fields')
-            else:
-                # Fields with {} surrounding the name should be replaced with the fields from the named preset
-                for i, p in enumerate(data['fields']):
-                    if p[0] == '{' and p[-1] == '}':
-                        referred_preset = self.presets.get(p[1:-1])
-                        if referred_preset:
-                            del data['fields'][i]
-                            data['fields'][i:i] = referred_preset['fields']
+
+            fields.extend(data.get('moreFields', []))
+
+            # Fields with {} surrounding the name should be replaced with the fields from the named preset
+            for i, p in enumerate(fields):
+                if p[0] == '{' and p[-1] == '}':
+                    referred_preset = self.presets.get(p[1:-1])
+                    if referred_preset:
+                        del fields[i]
+                        fields[i:i] = referred_preset['fields']
+
+            data['fields'] = fields
 
     def match_by_tags(self, tags):
         candidates = []
