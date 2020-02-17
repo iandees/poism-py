@@ -98,6 +98,13 @@
     </div>
     {% endif %}
 
+    {% if 'website' in fields %}
+    <div class="form-group">
+        <label for="name">Website</label>
+        {{ form.website(type="url", class_="form-control") }}
+    </div>
+    {% endif %}
+
     {% if 'address' in fields %}
     <legend>Address Details</legend>
 
