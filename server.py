@@ -225,10 +225,10 @@ def open_changeset():
     created_by_elem = ET.SubElement(cs_elem, 'tag')
     created_by_elem.attrib['k'] = 'comment'
     created_by_elem.attrib['v'] = 'Modifying a point of interest'
-    cs_text = ET.tostring(root, encoding='unicode')
+    cs_text = ET.tostring(root, encoding='utf-8')
 
     sess = osm.get_session(token)
-    resp = sess.put('changeset/create', data=cs_text.encode('utf-8'), headers={'Content-Type': 'text/xml'})
+    resp = sess.put('changeset/create', data=cs_text, headers={'Content-Type': 'text/xml'})
     app.logger.info("Response from changeset create: %s", resp.text)
     resp.raise_for_status()
     changeset_id = int(resp.text)
@@ -246,11 +246,11 @@ def apply_change(new_obj, action, changeset_id):
     obj_elem = obj_to_xml(new_obj)
     obj_elem.attrib['changeset'] = str(changeset_id)
     modify_elem.append(obj_elem)
-    osc_text = ET.tostring(root, encoding='unicode')
+    osc_text = ET.tostring(root, encoding='utf-8')
     app.logger.info("Applying change: %s", osc_text)
 
     sess = osm.get_session(token)
-    resp = sess.post('changeset/{}/upload'.format(changeset_id), data=osc_text.encode('utf-8'), headers={'Content-Type': 'text/xml'})
+    resp = sess.post('changeset/{}/upload'.format(changeset_id), data=osc_text, headers={'Content-Type': 'text/xml'})
     app.logger.info("Response from changeset upload: %s", resp.text)
 
     if resp.status_code == 409 and 'was closed at' in resp.text:
