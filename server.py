@@ -2,7 +2,7 @@ import copy
 import os
 import requests
 import xml.etree.ElementTree as ET
-from flask import Flask, jsonify, redirect, url_for, session, render_template, request
+from flask import Flask, flash, jsonify, redirect, url_for, session, render_template, request
 from flask_bootstrap import Bootstrap
 from flask_wtf import FlaskForm
 from wtforms import StringField, SubmitField
@@ -110,7 +110,7 @@ def get_pois_around(lat, lon, radius):
         node["name"]["tourism"]({bbox});
         way["name"]["tourism"]({bbox});
         );out center body;""".format(bbox=radius)
-    resp = requests.post('https://overpass-api.de/api/interpreter', data=overpass_query)
+    resp = requests.post('https://overpass-api.de/api/interpreter', data=overpass_query, timeout=20)
     resp.raise_for_status()
     data = resp.json()
 
@@ -155,7 +155,11 @@ def nearby():
         pois = []
         request_geolocation = True
     else:
-        pois = get_pois_around(lat, lon, radius)
+        try:
+            pois = get_pois_around(lat, lon, radius)
+        except (requests.HTTPError, requests.exceptions.ReadTimeout) as e:
+            flash("Problem getting POIs: %s" % e)
+            pois = []
         request_geolocation = False
 
     return render_template(

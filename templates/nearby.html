@@ -44,11 +44,17 @@
         </h4>
     </a>
 {% else %}
+{%- with messages = get_flashed_messages() %}
     {% if request_geolocation %}
     <span class="list-group-item list-group-item-danger">Locating you and loading data...</span>
+    {% elif messages %}
+    {% for message in messages %}
+    <span class="list-group-item list-group-item-danger">{{ message }}</span>
+    {% endfor %}
     {% else %}
     <span class="list-group-item list-group-item-danger">Hmm, I couldn't find anything interesting nearby.</span>
     {% endif %}
+{%- endwith %}
 {% endfor %}
     {%- if not request_geolocation %}
     {%- if nearby_items|length == limit %}
