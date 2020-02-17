@@ -228,7 +228,7 @@ def open_changeset():
     cs_text = ET.tostring(root, encoding='unicode')
 
     sess = osm.get_session(token)
-    resp = sess.put('changeset/create', data=cs_text, headers={'Content-Type': 'text/xml'})
+    resp = sess.put('changeset/create', data=cs_text.encode('utf-8'), headers={'Content-Type': 'text/xml'})
     app.logger.info("Response from changeset create: %s", resp.text)
     resp.raise_for_status()
     changeset_id = int(resp.text)
@@ -250,7 +250,7 @@ def apply_change(new_obj, action, changeset_id):
     app.logger.info("Applying change: %s", osc_text)
 
     sess = osm.get_session(token)
-    resp = sess.post('changeset/{}/upload'.format(changeset_id), data=osc_text, headers={'Content-Type': 'text/xml'})
+    resp = sess.post('changeset/{}/upload'.format(changeset_id), data=osc_text.encode('utf-8'), headers={'Content-Type': 'text/xml'})
     app.logger.info("Response from changeset upload: %s", resp.text)
 
     if resp.status_code == 409 and 'was closed at' in resp.text:
