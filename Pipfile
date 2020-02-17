@@ -7,9 +7,9 @@ name = "pypi"
 flask = "*"
 flask-bootstrap = "*"
 requests = "*"
-rauth = "*"
 gunicorn = "*"
 haversine = "*"
 flask-wtf = "*"
+requests-oauthlib = "*"
 
 [dev-packages]
