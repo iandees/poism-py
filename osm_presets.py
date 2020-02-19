@@ -21,7 +21,7 @@ class OSMPresets(object):
                 parent_preset_name = name.rsplit('/', 1)[0]
                 parent_preset = self.presets.get(parent_preset_name)
                 if parent_preset:
-                    data['fields'] = parent_preset.get('fields')
+                    fields = parent_preset.get('fields', [])
 
             fields.extend(data.get('moreFields', []))
 
