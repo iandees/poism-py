@@ -565,13 +565,12 @@ def add():
 
     obj = {}
 
+    form = PoiForm()
     if preset:
         fields = preset['fields']
         tags_from_preset = preset.get('tags') or {}
         tags_from_preset.update(preset.get('addTags') or {})
 
-    form = PoiForm()
-    apply_tags_to_form(tags_from_preset, fields, form)
 
     if form.validate_on_submit():
         new_obj = {
@@ -610,6 +609,8 @@ def add():
         return render_template(
             'add_object.html',
         )
+
+    apply_tags_to_form(tags_from_preset, fields, form)
 
     return render_template(
         'edit_object.html',
