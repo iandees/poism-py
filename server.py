@@ -58,11 +58,14 @@ def index():
 
 @app.route('/login')
 def login():
+    print("login")
     request_token = osm.fetch_request_token(request_token_url)
+    print("login: request token %s" % request_token)
     session.permanent = True
     session['request_token'] = request_token['oauth_token']
     session['request_secret'] = request_token['oauth_token_secret']
     authorize_url = osm.authorization_url(authorize_url_base)
+    print("login: authorize url %s" % authorize_url)
     return redirect(authorize_url)
 
 
@@ -74,12 +77,15 @@ def logout():
 
 @app.route('/callback')
 def callback():
+    print("callback")
     token = osm.parse_authorization_response(request.url)
+    print("callback: token %s" % token)
 
     if token.get('oauth_token') != session.get('request_token'):
         return redirect('logout')
 
     token = osm.fetch_access_token(access_token_url, verifier=session.get('request_secret'))
+    print("callback: access token %s" % token)
 
     access_token, access_token_secret = token
     session['access_token'] = token['oauth_token']
@@ -89,8 +95,10 @@ def callback():
     root = ET.fromstring(resp.text)
     user_name = root[0].attrib['display_name']
     session['user_name'] = user_name
+    print("callback: username %s" % user_name)
 
     next_url = session.pop('next', None) or url_for('nearby')
+    print("callback: next url %s" % next_url)
 
     return redirect(next_url)
 
