@@ -1,104 +1,120 @@
-{% import "bootstrap/utils.html" as utils %}
-{% extends "bootstrap/base.html" %}
+{% block doc -%}
+<!DOCTYPE html>
+<html{% block html_attribs %} lang="en"{% endblock html_attribs %}>
+{%- block html %}
+  <head>
+    {%- block head %}
+    <title>{% block title %}POISM - Points of Interest Editor{% endblock title %}</title>
 
-{% block html_attribs %} lang="en"{% endblock %}
-
-{% block metas %}
-    <meta name="viewport" content="width=device-width, initial-scale=1">
+    {%- block metas %}
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta charset="utf-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
-{% endblock %}
+    {%- endblock metas %}
 
-{% block title %}POISM - Points of Interest Editor{% endblock %}
+    {%- block styles %}
+    <link rel="stylesheet" href="https://unpkg.com/bootstrap@3.4.1/dist/css/bootstrap.min.css"
+        integrity="sha384-HSMxcRTRxnN+Bdg0JdbxYKrThecOKuH5zCYotlSAcp1+c8xmyTe9GYg1l9a69psu"
+        crossorigin=""/>
+    <style type="text/css">
+      /* Space out content a bit */
+      body {
+        padding-top: 20px;
+        padding-bottom: 20px;
+      }
 
-{% block styles %}
-{{ super() }}
-<style type="text/css">
-/* Space out content a bit */
-body {
-  padding-top: 20px;
-  padding-bottom: 20px;
-}
+      /* Everything but the jumbotron gets side spacing for mobile first views */
+      .header,
+      .marketing,
+      .footer {
+        padding-right: 15px;
+        padding-left: 15px;
+      }
 
-/* Everything but the jumbotron gets side spacing for mobile first views */
-.header,
-.marketing,
-.footer {
-  padding-right: 15px;
-  padding-left: 15px;
-}
+      /* Custom page header */
+      .header {
+        padding-bottom: 20px;
+        border-bottom: 1px solid #e5e5e5;
+      }
+      /* Make the masthead heading the same height as the navigation */
+      .header h3 {
+        margin-top: 0;
+        margin-bottom: 0;
+        line-height: 40px;
+      }
 
-/* Custom page header */
-.header {
-  padding-bottom: 20px;
-  border-bottom: 1px solid #e5e5e5;
-}
-/* Make the masthead heading the same height as the navigation */
-.header h3 {
-  margin-top: 0;
-  margin-bottom: 0;
-  line-height: 40px;
-}
+      /* Custom page footer */
+      .footer {
+        padding-top: 19px;
+        color: #777;
+        border-top: 1px solid #e5e5e5;
+      }
 
-/* Custom page footer */
-.footer {
-  padding-top: 19px;
-  color: #777;
-  border-top: 1px solid #e5e5e5;
-}
+      /* Customize container */
+      @media (min-width: 768px) {
+        .container {
+          max-width: 730px;
+        }
+      }
+      .container-narrow > hr {
+        margin: 30px 0;
+      }
 
-/* Customize container */
-@media (min-width: 768px) {
-  .container {
-    max-width: 730px;
-  }
-}
-.container-narrow > hr {
-  margin: 30px 0;
-}
+      /* Responsive: Portrait tablets and up */
+      @media screen and (min-width: 768px) {
+        /* Remove the padding we set earlier */
+        .header,
+        .marketing,
+        .footer {
+          padding-right: 0;
+          padding-left: 0;
+        }
+        /* Space out the masthead */
+        .header {
+          margin-bottom: 30px;
+        }
+        /* Remove the bottom border on the jumbotron for visual effect */
+        .jumbotron {
+          border-bottom: 0;
+        }
+      }
+    </style>
+    {%- endblock styles %}
+    {%- endblock head %}
+  </head>
+  <body{% block body_attribs %}{% endblock body_attribs %}>
+    {% block body -%}
+    <div class="container">
+    {% block navbar %}
+    <div class="header">
+      <nav>
+        <ul class="nav nav-pills pull-right">
+          {% if session.get('user_name') %}
+          <li role="presentation">
+            <form class="navbar-form navbar-right" role="logout" action="{{ url_for('logout') }}">
+              <button type="submit" class="btn btn-default">Logout {{ session.get('user_name') }}</button>
+            </form>
+          </li>
+          {% endif %}
+        </ul>
+      </nav>
+      <h3 class="text-muted"><a href="{{ url_for('index') }}">POISM</a></h3>
+    </div>
+    {%- endblock navbar %}
+    {% block content -%}
+    {%- endblock content %}
+    </div>
 
-/* Responsive: Portrait tablets and up */
-@media screen and (min-width: 768px) {
-  /* Remove the padding we set earlier */
-  .header,
-  .marketing,
-  .footer {
-    padding-right: 0;
-    padding-left: 0;
-  }
-  /* Space out the masthead */
-  .header {
-    margin-bottom: 30px;
-  }
-  /* Remove the bottom border on the jumbotron for visual effect */
-  .jumbotron {
-    border-bottom: 0;
-  }
-}
-</style>
-{% endblock %}
-
-{% block navbar %}
-{{ super() }}
-<div class="header clearfix">
-  <nav>
-    <ul class="nav nav-pills pull-right">
-      {% if session.get('user_name') %}
-      <li role="presentation">
-        <form class="navbar-form navbar-right" role="logout" action="{{ url_for('logout') }}">
-          <button type="submit" class="btn btn-default">Logout {{ session.get('user_name') }}</button>
-        </form>
-      </li>
-      {% endif %}
-    </ul>
-  </nav>
-  <h3 class="text-muted"><a href="{{ url_for('index') }}">POISM</a></h3>
-</div>
-{% endblock %}
-
-{% block body %}
-<div class="container">
-{{ super() }}
-{% block container %}{% endblock %}
-</div>
-{% endblock %}
+    {% block scripts %}
+    <script src="https://unpkg.com/jquery@3.4.1/dist/jquery.min.js"
+        integrity="sha384-vk5WoKIaW/vJyUAd9n/wmopsmNhiy+L2Z+SBxGYnUkunIxVxAv/UtMOhba/xskxh"
+        crossorigin=""></script>
+    <script src="https://unpkg.com/bootstrap@3.4.1/dist/js/bootstrap.min.js"
+        integrity="sha384-aJ21OjlMXNL5UyIl/XNwTMqvzeRMZH2w8c5cRVpzpU8Y5bApTppSuUkhZXN0VxHd"
+        crossorigin=""></script>
+    {%- endblock scripts %}
+    {%- endblock body %}
+  </body>
+{%- endblock html %}
+</html>
+{% endblock doc -%}

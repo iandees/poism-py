@@ -2,7 +2,7 @@ import copy
 import os
 import requests
 import xml.etree.ElementTree as ET
-from flask import Flask, flash, jsonify, redirect, url_for, session, render_template, request
+from flask import Flask, flash, jsonify, make_response, redirect, url_for, session, render_template, request
 from flask_bootstrap import Bootstrap
 from flask_wtf import FlaskForm
 from wtforms import StringField, SubmitField
@@ -277,6 +277,39 @@ def apply_change(new_obj, action, changeset_id):
     }
 
 
+@app.route('/presets.json')
+def presets_json():
+    def convert(kv):
+        name, data = kv
+        if not (name.startswith("amenity/") or \
+            name.startswith("craft/") or \
+            name.startswith("leisure/") or \
+            name.startswith("shop/") or \
+            name.startswith("tourism/")):
+
+            return None
+
+        if 'point' not in data.get('geometry', []):
+            return None
+
+        terms = data.get('terms') or []
+        terms.insert(0, data.get('name').lower())
+
+        return {
+            "icon": data.get("icon"),
+            "id": name,
+            "text": data.get("name"),
+            "terms": terms,
+        }
+
+    filtered_presets = list(filter(None, map(convert, presets.presets.items())))
+
+    resp = make_response(jsonify(results=filtered_presets, pagination=dict(more=False)))
+    resp.cache_control.public = True
+    resp.cache_control.max_age = 60
+    return resp
+
+
 @app.route('/pois_around.geojson')
 def pois_around():
     if 'user_name' not in session:
@@ -393,6 +426,57 @@ def object_as_geojson(obj_type, obj_id):
     return jsonify(feature)
 
 
+def apply_form_to_tags(tags, fields, form):
+    if 'name' in fields:
+        tags['name'] = form.name.data
+
+    if 'address' in fields:
+        tags['addr:housenumber'] = form.addr_housenumber.data
+        tags['addr:street'] = form.addr_street.data
+        tags['addr:city'] = form.addr_city.data
+        tags['addr:state'] = form.addr_state.data
+        tags['addr:postcode'] = form.addr_postcode.data
+
+    if 'phone' in fields:
+        tags['phone'] = form.phone.data
+
+    if 'website' in fields:
+        tags['website'] = form.website.data
+
+    if 'opening_hours' in fields:
+        tags['opening_hours'] = form.opening_hours_complex.data
+
+    keys_to_delete = list(k for k in tags.keys() if tags[k] is None)
+    for k in keys_to_delete:
+        del tags[k]
+
+    return tags
+
+
+def apply_tags_to_form(tags, fields, form):
+    if 'name' in fields:
+        form.name.data = tags.get('name')
+
+    if 'address' in fields:
+        form.addr_housenumber.data = tags.get('addr:housenumber')
+        form.addr_street.data = tags.get('addr:street')
+        form.addr_city.data = tags.get('addr:city')
+        form.addr_state.data = tags.get('addr:state')
+        form.addr_postcode.data = tags.get('addr:postcode')
+
+    if 'phone' in fields:
+        form.phone.data = tags.get('phone')
+
+    if 'website' in fields:
+        form.website.data = tags.get('website')
+
+    if 'opening_hours' in fields:
+        opening_hours = tags.get('opening_hours')
+        form.opening_hours_complex.data = opening_hours
+
+    return form
+
+
 @app.route('/edit/<obj_type>/<int:obj_id>', methods=['GET', 'POST'])
 def edit_object(obj_type, obj_id):
     if 'user_name' not in session:
@@ -421,48 +505,12 @@ def edit_object(obj_type, obj_id):
         app.logger.info("Matches preset %s with fields %s", preset['name'], fields)
 
     if request.method == 'GET':
-
-        if 'name' in fields:
-            form.name.data = obj_tags.get('name')
-
-        if 'address' in fields:
-            form.addr_housenumber.data = obj_tags.get('addr:housenumber')
-            form.addr_street.data = obj_tags.get('addr:street')
-            form.addr_city.data = obj_tags.get('addr:city')
-            form.addr_state.data = obj_tags.get('addr:state')
-            form.addr_postcode.data = obj_tags.get('addr:postcode')
-
-        if 'phone' in fields:
-            form.phone.data = obj_tags.get('phone')
-
-        if 'website' in fields:
-            form.website.data = obj_tags.get('website')
-
-        if 'opening_hours' in fields:
-            opening_hours = obj_tags.get('opening_hours')
-            form.opening_hours_complex.data = opening_hours
+        apply_tags_to_form(obj_tags, fields, form)
 
     if form.validate_on_submit():
         new_obj = copy.deepcopy(obj)
 
-        if 'name' in fields:
-            new_obj['tags']['name'] = form.name.data
-
-        if 'address' in fields:
-            new_obj['tags']['addr:housenumber'] = form.addr_housenumber.data
-            new_obj['tags']['addr:street'] = form.addr_street.data
-            new_obj['tags']['addr:city'] = form.addr_city.data
-            new_obj['tags']['addr:state'] = form.addr_state.data
-            new_obj['tags']['addr:postcode'] = form.addr_postcode.data
-
-        if 'phone' in fields:
-            new_obj['tags']['phone'] = form.phone.data
-
-        if 'website' in fields:
-            new_obj['tags']['website'] = form.website.data
-
-        if 'opening_hours' in fields:
-            new_obj['tags']['opening_hours'] = form.opening_hours_complex.data
+        apply_form_to_tags(new_obj['tags'], fields, form)
 
         # Clear out tags that are empty
         empty_keys = [k for k, v in new_obj['tags'].items() if v is None]
@@ -494,7 +542,6 @@ def edit_object(obj_type, obj_id):
         'edit_object.html',
         form=form,
         obj=obj,
-        fields=fields,
         preset=preset,
     )
 
@@ -504,21 +551,39 @@ def add():
     if 'user_name' not in session:
         return redirect(url_for('login'))
 
-    if request.method == 'POST':
+    lat = request.args.get("lat", type=float)
+    lon = request.args.get("lon", type=float)
+    if lat is None or lon is None:
+        return redirect(url_for("nearby"))
+
+    preset_val = request.args.get("preset")
+    preset = presets.presets.get(preset_val)
+
+    if preset_val and not preset:
+        flash("That preset is not recognized")
+        return redirect(url_for("add", lat=lat, lon=lon))
+
+    obj = {}
+
+    if preset:
+        fields = preset['fields']
+        tags_from_preset = preset.get('tags') or {}
+        tags_from_preset.update(preset.get('addTags') or {})
+
+    form = PoiForm()
+    apply_tags_to_form(tags_from_preset, fields, form)
+
+    if form.validate_on_submit():
         new_obj = {
             'type': 'node',
             'version': 1,
             'id': -1,
-            'lat': round(float(request.form.get('lat')), 6),
-            'lon': round(float(request.form.get('lon')), 6),
-            'tags': {},
+            'lat': lat,
+            'lon': lon,
+            'tags': tags_from_preset,
         }
 
-        for k, v in zip(request.form.getlist('keys'), request.form.getlist('values')):
-            if not k and not v:
-                continue
-            elif new_obj['tags'].get(k) != v:
-                new_obj['tags'][k] = v
+        apply_form_to_tags(new_obj['tags'], fields, form)
 
         changeset_id = session.get('changeset_id')
         if not changeset_id:
@@ -541,7 +606,15 @@ def add():
 
         return redirect(url_for('edit_object', obj_type='node', obj_id=created_obj['id']))
 
-    else:
+    if not preset_val:
         return render_template(
             'add_object.html',
         )
+
+    return render_template(
+        'edit_object.html',
+        form=form,
+        obj=obj,
+        preset=preset,
+        creating_new_place=True,
+    )

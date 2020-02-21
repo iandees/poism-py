@@ -2,15 +2,15 @@
 
 {% block styles %}
 {{ super() }}
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.5.1/dist/leaflet.css"
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.6.0/dist/leaflet.css"
     integrity="sha384-eS4bw6aEvhCSXWGP85ANR/N8isWKzT7P36NvcuTJGkrj6wsbxLVpXslrNXYHyseD"
     crossorigin=""/>
 {% endblock %}
 
 {% block scripts %}
 {{ super() }}
-<script src="https://unpkg.com/leaflet@1.5.1/dist/leaflet.js"
-    integrity="sha384-bmPowDlt+owc6Mn3LwOzLPkYiVm6MuKeLMe0qN2pp7Fhmux2xtVJm5e+ekpCVv4x"
+<script src="https://unpkg.com/leaflet@1.6.0/dist/leaflet.js"
+    integrity="sha384-wKOriz2x8/bF1D9t6PuKhSpxfhHeVi9huvyuxJrrShSJpi5+rmRIsM90UuWbdAYJ"
     crossorigin=""></script>
 <script src="https://unpkg.com/leaflet-ajax@2.1.0/dist/leaflet.ajax.min.js"
     integrity="sha384-sKs8ZrrxyJoElcPVznZwGpUTTXvkMYfHYxdIFzO8Hd0TA6emONMj8BwnsFf+6cZ/"
@@ -43,11 +43,18 @@
         }
         L.control.layers(baseMaps).addTo(map);
 
+        {%- if creating_new_place %}
+        var requestedLatLon = new L.LatLng({{ request.args.lat|float }}, {{ request.args.lon|float }});
+        var placeLayer = new L.Marker(requestedLatLon);
+        placeLayer.addTo(map);
+        map.setView(requestedLatLon, 19);
+        {%- else %}
         var geojsonLayer = new L.GeoJSON.AJAX("{{ url_for('object_as_geojson', obj_type=obj['type'], obj_id=obj['id']) }}");
         geojsonLayer.on('data:loaded', function(e) {
             geojsonLayer.addTo(map);
             map.fitBounds(geojsonLayer.getBounds());
         });
+        {%- endif %}
 
         map.locate({enableHighAccuracy: true, watch: true, maxZoom: 18});
         map.on('locationfound', function(e) {
@@ -63,7 +70,7 @@
 </script>
 {% endblock %}
 
-{% block container %}
+{% block content %}
 {{super()}}
 
 <p><a href="{{ url_for('nearby', lat=request.args.get('lat'), lon=request.args.get('lon')) }}">← Back to nearby places</a></p>
@@ -84,28 +91,28 @@
 <form method="post">
     {{ form.hidden_tag() }}
 
-    {% if 'name' in fields %}
+    {% if 'name' in preset.fields %}
     <div class="form-group">
         <label for="name">Name</label>
         {{ form.name(class_="form-control") }}
     </div>
     {% endif %}
 
-    {% if 'phone' in fields %}
+    {% if 'phone' in preset.fields %}
     <div class="form-group">
         <label for="name">Phone</label>
         {{ form.phone(type="tel", class_="form-control") }}
     </div>
     {% endif %}
 
-    {% if 'website' in fields %}
+    {% if 'website' in preset.fields %}
     <div class="form-group">
         <label for="name">Website</label>
         {{ form.website(type="url", class_="form-control") }}
     </div>
     {% endif %}
 
-    {% if 'address' in fields %}
+    {% if 'address' in preset.fields %}
     <legend>Address Details</legend>
 
     <div class="row">
@@ -135,7 +142,7 @@
     </div>
     {% endif %}
 
-    {% if 'opening_hours' in fields %}
+    {% if 'opening_hours' in preset.fields %}
     <legend>Opening Hours</legend>
 
     <div class="row">
