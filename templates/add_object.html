@@ -76,7 +76,7 @@ $(document).ready(function() {
         attribution: osmAttrib
     }).addTo(map);
 
-    var mbUrl = 'https://{s}.tiles.mapbox.com/styles/v1/openstreetmap/cj8gojt0i1eau2rnn7q4mdgu7/tiles/256/{z}/{x}/{y}?access_token=pk.eyJ1Ijoib3BlbnN0cmVldG1hcCIsImEiOiJhNVlHd29ZIn0.ti6wATGDWOmCnCYen-Ip7Q';
+    var mbUrl = 'https://{s}.tiles.mapbox.com/v4/mapbox.satellite/{z}/{x}/{y}.jpg?access_token=pk.eyJ1Ijoib3BlbnN0cmVldG1hcCIsImEiOiJjaml5MjVyb3MwMWV0M3hxYmUzdGdwbzE4In0.q548FjhsSJzvXsGlPsFxAQ';
     var mbSat = new L.TileLayer(mbUrl, {
         minZoom: 8,
         maxZoom: 22,
