@@ -84,7 +84,7 @@ def callback():
     if token.get('oauth_token') != session.get('request_token'):
         return redirect('logout')
 
-    token = osm.fetch_access_token(access_token_url, verifier=app.config.get('OSM_CLIENT_SECRET'))
+    token = osm.fetch_access_token(access_token_url, verifier=token.get('oauth_verifier'))
     print("callback: access token %s" % token)
 
     access_token, access_token_secret = token
