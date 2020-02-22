@@ -79,6 +79,7 @@ def authorize():
     )
 
     osm.parse_authorization_response(request.url)
+    app.logger.info("OSM token in authorize %s", osm.token)
     osm.fetch_access_token('https://www.openstreetmap.org/oauth/access_token')
     session['oauth_params'] = osm.token
 
