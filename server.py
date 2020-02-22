@@ -11,8 +11,6 @@ from osm_presets import OSMPresets
 from werkzeug.middleware.proxy_fix import ProxyFix
 from requests_oauthlib import OAuth1Session
 
-import logging
-logging.basicConfig(level=logging.DEBUG)
 
 app = Flask(__name__)
 app.config.update(
@@ -62,10 +60,10 @@ def login():
         callback_uri=url_for('authorize', _external=True),
     )
 
-    req_token = osm.fetch_request_token('https://www.openstreetmap.org/oauth/request_token')
+    req_token = osm.fetch_request_token(request_token_url)
     session['oauth_params'] = req_token
 
-    auth_url = osm.authorization_url('https://www.openstreetmap.org/oauth/authorize')
+    auth_url = osm.authorization_url(authorize_url)
     return redirect(auth_url)
 
 
@@ -80,7 +78,7 @@ def authorize():
 
     osm.parse_authorization_response(request.url)
     app.logger.info("OSM token in authorize %s", osm.token)
-    osm.fetch_access_token('https://www.openstreetmap.org/oauth/access_token')
+    osm.fetch_access_token(access_token_url)
     session['oauth_params'] = osm.token
 
     userreq = osm.get('https://api.openstreetmap.org/api/0.6/user/details')
@@ -239,7 +237,7 @@ def open_changeset():
         app.config.get('OSM_CLIENT_ID'),
         **session['oauth_params'],
     )
-    resp = osm.put('changeset/create', data=cs_text, headers={'Content-Type': 'text/xml'}, auth=auth)
+    resp = osm.put(api_base_url + 'changeset/create', data=cs_text, headers={'Content-Type': 'text/xml'}, auth=auth)
     app.logger.info("Response from changeset create: %s", resp.text)
     resp.raise_for_status()
     changeset_id = int(resp.text)
@@ -262,7 +260,7 @@ def apply_change(new_obj, action, changeset_id):
         app.config.get('OSM_CLIENT_ID'),
         **session['oauth_params'],
     )
-    resp = osm.post('changeset/{}/upload'.format(changeset_id), data=osc_text, headers={'Content-Type': 'text/xml'}, auth=auth)
+    resp = osm.post(api_base_url + 'changeset/{}/upload'.format(changeset_id), data=osc_text, headers={'Content-Type': 'text/xml'}, auth=auth)
     app.logger.info("Response from changeset upload: %s", resp.text)
 
     if resp.status_code == 409 and 'was closed at' in resp.text:
@@ -486,7 +484,7 @@ def edit_object(obj_type, obj_id):
     if obj_type not in ('node', 'way'):
         return redirect(url_for('index'))
 
-    resp = requests.get('https://www.openstreetmap.org/api/0.6/{}/{}'.format(obj_type, obj_id))
+    resp = requests.get(api_base_url + '{}/{}'.format(obj_type, obj_id))
 
     if resp.status_code != 200:
         app.logger.info("OSM API server returned HTTP %s for %s/%s", resp.status_code, obj_type, obj_id)
@@ -525,7 +523,7 @@ def edit_object(obj_type, obj_id):
 
         try:
             apply_change(new_obj, 'modify', changeset_id)
-            app.logger.info("Saved changes to https://osm.org/%s/%s/%s", new_obj['type'], new_obj['id'], new_obj['version'])
+            app.logger.info("Saved changes to https://osm.org/%s/%s", new_obj['type'], new_obj['id'])
         except ChangesetClosedException:
             app.logger.info("Changeset %s closed, opening a new one and trying again", changeset_id)
             session.pop('changeset_id', None)
@@ -571,7 +569,6 @@ def add():
         tags_from_preset = preset.get('tags') or {}
         tags_from_preset.update(preset.get('addTags') or {})
 
-
     if form.validate_on_submit():
         new_obj = {
             'type': 'node',
@@ -592,7 +589,7 @@ def add():
 
         try:
             created_obj = apply_change(new_obj, 'create', changeset_id)
-            app.logger.info("Saved changes to https://osm.org/%s/%s/%s", new_obj['type'], new_obj['id'], new_obj['version'])
+            app.logger.info("Saved changes to https://osm.org/%s/%s", new_obj['type'], new_obj['id'])
         except ChangesetClosedException:
             app.logger.info("Changeset %s closed, opening a new one and trying again", changeset_id)
             session.pop('changeset_id', None)
