@@ -7,10 +7,12 @@ from flask_bootstrap import Bootstrap
 from flask_wtf import FlaskForm
 from wtforms import StringField, SubmitField
 from haversine import haversine
-from requests_oauthlib import OAuth1Session, OAuth1
 from osm_presets import OSMPresets
 from werkzeug.middleware.proxy_fix import ProxyFix
+from requests_oauthlib import OAuth1Session
 
+import logging
+logging.basicConfig(level=logging.DEBUG)
 
 app = Flask(__name__)
 app.config.update(
@@ -21,17 +23,13 @@ app.config.update(
 app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1)
 Bootstrap(app)
 
-presets = OSMPresets()
-presets.load_presets()
-
-base_url = 'https://api.openstreetmap.org/api/0.6/'
 request_token_url = 'https://www.openstreetmap.org/oauth/request_token'
 access_token_url = 'https://www.openstreetmap.org/oauth/access_token'
-authorize_url_base = 'https://www.openstreetmap.org/oauth/authorize'
-osm = OAuth1Session(
-    client_key=app.config.get('OSM_CLIENT_ID'),
-    client_secret=app.config.get('OSM_CLIENT_SECRET'),
-)
+authorize_url = 'https://www.openstreetmap.org/oauth/authorize'
+api_base_url = 'https://api.openstreetmap.org/api/0.6/'
+
+presets = OSMPresets()
+presets.load_presets()
 
 
 class ChangesetClosedException(Exception):
@@ -58,49 +56,46 @@ def index():
 
 @app.route('/login')
 def login():
-    print("login")
-    request_token = osm.fetch_request_token(request_token_url)
-    print("login: request token %s" % request_token)
-    session.permanent = True
-    session['request_token'] = request_token['oauth_token']
-    session['request_secret'] = request_token['oauth_token_secret']
-    authorize_url = osm.authorization_url(authorize_url_base)
-    print("login: authorize url %s" % authorize_url)
-    return redirect(authorize_url)
+    osm = OAuth1Session(
+        app.config.get('OSM_CLIENT_ID'),
+        client_secret=app.config.get('OSM_CLIENT_SECRET'),
+        callback_uri=url_for('authorize', _external=True),
+    )
+
+    req_token = osm.fetch_request_token('https://www.openstreetmap.org/oauth/request_token')
+    session['oauth_params'] = req_token
+
+    auth_url = osm.authorization_url('https://www.openstreetmap.org/oauth/authorize')
+    return redirect(auth_url)
+
+
+@app.route('/authorize')
+def authorize():
+    osm = OAuth1Session(
+        app.config.get('OSM_CLIENT_ID'),
+        client_secret=app.config.get('OSM_CLIENT_SECRET'),
+        resource_owner_key=session['oauth_params']['oauth_token'],
+        resource_owner_secret=session['oauth_params']['oauth_token_secret'],
+    )
+
+    osm.parse_authorization_response(request.url)
+    osm.fetch_access_token('https://www.openstreetmap.org/oauth/access_token')
+    session['oauth_params'] = osm.token
+
+    userreq = osm.get('https://api.openstreetmap.org/api/0.6/user/details')
+    root = ET.fromstring(userreq.text)
+    user_name = root[0].attrib['display_name']
+    session['user_name'] = user_name
+
+    next_url = session.pop('next', None) or url_for('nearby')
+
+    return redirect(next_url)
 
 
 @app.route('/logout')
 def logout():
     session.clear()
     return redirect(url_for('index'))
-
-
-@app.route('/callback')
-def callback():
-    print("callback")
-    token = osm.parse_authorization_response(request.url)
-    print("callback: token %s" % token)
-
-    if token.get('oauth_token') != session.get('request_token'):
-        return redirect('logout')
-
-    token = osm.fetch_access_token(access_token_url, verifier=token.get('oauth_verifier'))
-    print("callback: access token %s" % token)
-
-    access_token, access_token_secret = token
-    session['access_token'] = token['oauth_token']
-    session['access_token_secret'] = token['oauth_token_secret']
-
-    resp = osm.get(base_url + 'user/details')
-    root = ET.fromstring(resp.text)
-    user_name = root[0].attrib['display_name']
-    session['user_name'] = user_name
-    print("callback: username %s" % user_name)
-
-    next_url = session.pop('next', None) or url_for('nearby')
-    print("callback: next url %s" % next_url)
-
-    return redirect(next_url)
 
 
 def get_pois_around(lat, lon, radius):
@@ -239,13 +234,11 @@ def open_changeset():
     created_by_elem.attrib['v'] = 'Modifying a point of interest'
     cs_text = ET.tostring(root, encoding='unicode')
 
-    auth = OAuth1(
-        client_key=app.config.get('OSM_CLIENT_ID'),
-        client_secret=app.config.get('OSM_CLIENT_SECRET'),
-        resource_owner_key=session['access_token'],
-        resource_owner_secret=session['access_token_secret'],
+    osm = OAuth1Session(
+        app.config.get('OSM_CLIENT_ID'),
+        **session['oauth_params'],
     )
-    resp = requests.put(base_url + 'changeset/create', data=cs_text, headers={'Content-Type': 'text/xml'}, auth=auth)
+    resp = osm.put('changeset/create', data=cs_text, headers={'Content-Type': 'text/xml'}, auth=auth)
     app.logger.info("Response from changeset create: %s", resp.text)
     resp.raise_for_status()
     changeset_id = int(resp.text)
@@ -264,13 +257,11 @@ def apply_change(new_obj, action, changeset_id):
     osc_text = ET.tostring(root, encoding='unicode')
     app.logger.info("Applying change: %s", osc_text)
 
-    auth = OAuth1(
-        client_key=app.config.get('OSM_CLIENT_ID'),
-        client_secret=app.config.get('OSM_CLIENT_SECRET'),
-        resource_owner_key=session['access_token'],
-        resource_owner_secret=session['access_token_secret'],
+    osm = OAuth1Session(
+        app.config.get('OSM_CLIENT_ID'),
+        **session['oauth_params'],
     )
-    resp = requests.post(base_url + 'changeset/{}/upload'.format(changeset_id), data=osc_text, headers={'Content-Type': 'text/xml'}, auth=auth)
+    resp = osm.post('changeset/{}/upload'.format(changeset_id), data=osc_text, headers={'Content-Type': 'text/xml'}, auth=auth)
     app.logger.info("Response from changeset upload: %s", resp.text)
 
     if resp.status_code == 409 and 'was closed at' in resp.text:
