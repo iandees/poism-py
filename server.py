@@ -203,6 +203,9 @@ def obj_to_xml(obj):
     elem.attrib['version'] = str(obj['version'])
 
     for k, v in obj['tags'].items():
+        if not v:
+            continue
+
         t = ET.SubElement(elem, 'tag')
         t.attrib['k'] = k
         t.attrib['v'] = v
