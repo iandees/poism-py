@@ -144,7 +144,7 @@ def get_pois_around(lat, lon, radius):
 
 @app.route('/edit/nearby')
 def nearby():
-    if 'user_name' not in session:
+    if 'user_name' not in session or 'oauth_params' not in session:
         return redirect(url_for('login'))
 
     lat = request.args.get('lat', type=float)
@@ -315,9 +315,6 @@ def presets_json():
 
 @app.route('/pois_around.geojson')
 def pois_around():
-    if 'user_name' not in session:
-        return redirect(url_for('login'))
-
     lat = request.args.get('lat', type=float)
     lon = request.args.get('lon', type=float)
 
@@ -449,6 +446,7 @@ def apply_form_to_tags(tags, fields, form):
     if 'opening_hours' in fields:
         tags['opening_hours'] = form.opening_hours_complex.data
 
+    # Remove tags that are empty
     keys_to_delete = list(k for k in tags.keys() if tags[k] is None)
     for k in keys_to_delete:
         del tags[k]
@@ -482,7 +480,7 @@ def apply_tags_to_form(tags, fields, form):
 
 @app.route('/edit/<obj_type>/<int:obj_id>', methods=['GET', 'POST'])
 def edit_object(obj_type, obj_id):
-    if 'user_name' not in session:
+    if 'user_name' not in session or 'oauth_params' not in session:
         session['next'] = request.url
         return redirect(url_for('login'))
 
@@ -515,11 +513,6 @@ def edit_object(obj_type, obj_id):
 
         apply_form_to_tags(new_obj['tags'], fields, form)
 
-        # Clear out tags that are empty
-        empty_keys = [k for k, v in new_obj['tags'].items() if v is None]
-        for k in empty_keys:
-            del new_obj['tags'][k]
-
         changeset_id = session.get('changeset_id')
         if not changeset_id:
             changeset_id = open_changeset()
@@ -551,7 +544,7 @@ def edit_object(obj_type, obj_id):
 
 @app.route('/add', methods=['GET', 'POST'])
 def add():
-    if 'user_name' not in session:
+    if 'user_name' not in session or 'oauth_params' not in session:
         return redirect(url_for('login'))
 
     lat = request.args.get("lat", type=float)
@@ -604,6 +597,7 @@ def add():
             app.logger.info("Created a new changeset with ID %s", changeset_id)
 
             created_obj = apply_change(new_obj, 'create', changeset_id)
+            app.logger.info("Saved changes to https://osm.org/%s/%s", new_obj['type'], new_obj['id'])
 
         return redirect(url_for('edit_object', obj_type='node', obj_id=created_obj['id']))
 
