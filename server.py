@@ -240,7 +240,7 @@ def open_changeset():
     )
     osm.token = session['oauth_params']
 
-    resp = osm.put(api_base_url + 'changeset/create', data=cs_text, headers={'Content-Type': 'text/xml'}, auth=auth)
+    resp = osm.put(api_base_url + 'changeset/create', data=cs_text, headers={'Content-Type': 'text/xml'})
     app.logger.info("Response from changeset create: %s", resp.text)
     resp.raise_for_status()
     changeset_id = int(resp.text)
@@ -265,7 +265,7 @@ def apply_change(new_obj, action, changeset_id):
     )
     osm.token = session['oauth_params']
 
-    resp = osm.post(api_base_url + 'changeset/{}/upload'.format(changeset_id), data=osc_text, headers={'Content-Type': 'text/xml'}, auth=auth)
+    resp = osm.post(api_base_url + 'changeset/{}/upload'.format(changeset_id), data=osc_text, headers={'Content-Type': 'text/xml'})
     app.logger.info("Response from changeset upload: %s", resp.text)
 
     if resp.status_code == 409 and 'was closed at' in resp.text:
