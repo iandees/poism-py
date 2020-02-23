@@ -235,9 +235,11 @@ def open_changeset():
     cs_text = ET.tostring(root, encoding='unicode')
 
     osm = OAuth1Session(
-        app.config.get('OSM_CLIENT_ID'),
-        **session['oauth_params'],
+        client_key=app.config.get('OSM_CLIENT_ID'),
+        client_secret=app.config.get('OSM_CLIENT_SECRET'),
     )
+    osm.token = session['oauth_params']
+
     resp = osm.put(api_base_url + 'changeset/create', data=cs_text, headers={'Content-Type': 'text/xml'}, auth=auth)
     app.logger.info("Response from changeset create: %s", resp.text)
     resp.raise_for_status()
@@ -258,9 +260,11 @@ def apply_change(new_obj, action, changeset_id):
     app.logger.info("Applying change: %s", osc_text)
 
     osm = OAuth1Session(
-        app.config.get('OSM_CLIENT_ID'),
-        **session['oauth_params'],
+        client_key=app.config.get('OSM_CLIENT_ID'),
+        client_secret=app.config.get('OSM_CLIENT_SECRET'),
     )
+    osm.token = session['oauth_params']
+
     resp = osm.post(api_base_url + 'changeset/{}/upload'.format(changeset_id), data=osc_text, headers={'Content-Type': 'text/xml'}, auth=auth)
     app.logger.info("Response from changeset upload: %s", resp.text)
 
