@@ -1,6 +1,6 @@
 {% extends "_template.html" %}
 
-{% block title %}{{ super() }} - Edit {{ obj.tags.name }}{% endblock %}
+{% block title %}{{ super() }} - Edit {{ obj.get('tags', {}).get('name') or 'A Place' }}{% endblock %}
 
 {% block styles %}
 {{ super() }}
