@@ -1,5 +1,7 @@
 {% extends "_template.html" %}
 
+{% block title %}{{ super() }} - Nearby Places{% endblock %}
+
 {% block scripts %}
 {{super()}}
 {% if request_geolocation %}

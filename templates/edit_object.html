@@ -1,5 +1,7 @@
 {% extends "_template.html" %}
 
+{% block title %}{{ super() }} - Edit {{ obj.tags.name }}{% endblock %}
+
 {% block styles %}
 {{ super() }}
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.6.0/dist/leaflet.css"
