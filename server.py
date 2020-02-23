@@ -222,8 +222,6 @@ def obj_to_xml(obj):
 
 
 def open_changeset():
-    token = (session['access_token'], session['access_token_secret'])
-
     root = ET.Element('osm')
     root.attrib['version'] = "0.6"
     root.attrib['generator'] = "poism"
