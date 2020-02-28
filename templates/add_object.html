@@ -91,15 +91,19 @@ $(document).ready(function() {
     }
     L.control.layers(baseMaps).addTo(map);
 
+    function updateMarkerLocation(pt) {
+        $('#lat-form').val(pt.lat.toFixed(7));
+        $('#lon-form').val(pt.lng.toFixed(7));
+        console.log("Moved marker to " + pt.lat.toFixed(6) + "," + pt.lng.toFixed(6));
+    }
+
     var pt = L.latLng(params.get('lat'), params.get('lon'));
+    updateMarkerLocation(pt);
     map.setView(pt, 17);
 
     marker = L.marker(pt, {draggable: true, riseOnHover: true}).addTo(map);
     marker.on('moveend', function(e) {
-        var ll = marker.getLatLng();
-        console.log("Moved marker to " + ll.lat.toFixed(6) + "," + ll.lng.toFixed(6));
-        $('#lat-form').val(ll.lat.toFixed(7));
-        $('#lon-form').val(ll.lng.toFixed(7));
+        updateMarkerLocation(marker.getLatLng());
     });
 
     map.locate({enableHighAccuracy: true, watch: true, maxZoom: 18});
