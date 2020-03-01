@@ -504,6 +504,13 @@ def edit_object(obj_type, obj_id):
     if preset:
         fields = preset.get('fields')
         app.logger.info("Matches preset %s with fields %s", preset['name'], fields)
+    else:
+        fields = ["name"]
+        preset = {
+            'icon': 'fas-vector-square',
+            'name': 'Unknown Preset',
+        }
+        app.logger.info("No preset matches")
 
     if request.method == 'GET':
         apply_tags_to_form(obj_tags, fields, form)
