@@ -509,6 +509,7 @@ def edit_object(obj_type, obj_id):
         preset = {
             'icon': 'fas-vector-square',
             'name': 'Unknown Preset',
+            'fields': ["name"],
         }
         app.logger.info("No preset matches")
 
