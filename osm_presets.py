@@ -1,3 +1,4 @@
+import copy
 import requests
 
 
@@ -9,31 +10,38 @@ class OSMPresets(object):
         resp = requests.get('https://raw.githubusercontent.com/openstreetmap/iD/master/data/presets/presets.json')
         resp.raise_for_status()
         self.presets = resp.json().get('presets')
-        self._populate_parents()
 
-    def _populate_parents(self):
+    def _resolve_references(self, path, preset):
         """ Popuate implied presets and referential relationships. """
-        for name, data in self.presets.items():
-            fields = data.get('fields', [])
+        fields = preset.get('fields', [])
 
-            # Presets with no 'fields' attribute should pull their fields from the parent preset.
-            if not fields:
-                parent_preset_name = name.rsplit('/', 1)[0]
+        # Presets with no 'fields' attribute should pull their fields from the parent preset.
+        if not fields:
+            path_copy = copy.copy(path)
+            while path_copy:
+                path_parts = path_copy.rsplit("/", 1)
+                if len(path_parts) < 2:
+                    break
+
+                parent_preset_name = path_parts[0]
                 parent_preset = self.presets.get(parent_preset_name)
                 if parent_preset:
-                    fields = parent_preset.get('fields', [])
+                    parent_fields = parent_preset.get('fields', [])
+                    fields.extend(parent_fields)
+                path_copy = parent_preset_name
 
-            fields.extend(data.get('moreFields', []))
+        fields.extend(preset.get('moreFields', []))
 
-            # Fields with {} surrounding the name should be replaced with the fields from the named preset
-            for i, p in enumerate(fields):
-                if p[0] == '{' and p[-1] == '}':
-                    referred_preset = self.presets.get(p[1:-1])
-                    if referred_preset:
-                        del fields[i]
-                        fields[i:i] = referred_preset['fields']
+        # Fields with {} surrounding the name should be replaced with the fields from the named preset
+        for i, p in enumerate(fields):
+            if p[0] == '{' and p[-1] == '}':
+                referred_preset = self.presets.get(p[1:-1])
+                if referred_preset:
+                    del fields[i]
+                    fields[i:i] = referred_preset['fields']
 
-            data['fields'] = fields
+        preset['fields'] = fields
+        return preset
 
     def match_by_tags(self, tags):
         candidates = []
@@ -52,10 +60,12 @@ class OSMPresets(object):
                     candidate_points -= 1
 
             if candidate_points > 0:
-                candidates.append((candidate_points, preset_data))
+                candidates.append((candidate_points, preset_name, preset_data))
 
         if candidates:
-            return sorted(candidates, key=lambda i: i[0], reverse=True)[0][1]
+            points, name, data = sorted(candidates, key=lambda i: i[0], reverse=True)[0]
+            data = self._resolve_references(name, data)
+            return data
         else:
             return None
 
