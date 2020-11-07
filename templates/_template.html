@@ -16,6 +16,9 @@
     <link rel="stylesheet" href="https://unpkg.com/bootstrap@3.4.1/dist/css/bootstrap.min.css"
         integrity="sha384-HSMxcRTRxnN+Bdg0JdbxYKrThecOKuH5zCYotlSAcp1+c8xmyTe9GYg1l9a69psu"
         crossorigin=""/>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.6.0/dist/leaflet.css"
+        integrity="sha384-eS4bw6aEvhCSXWGP85ANR/N8isWKzT7P36NvcuTJGkrj6wsbxLVpXslrNXYHyseD"
+        crossorigin=""/>
     <style type="text/css">
       /* Space out content a bit */
       body {
@@ -78,6 +81,49 @@
           border-bottom: 0;
         }
       }
+
+      .twitter-typeahead,
+      .tt-hint,
+      .tt-input,
+      .tt-menu {
+          width: 100%;
+      }
+
+      .tt-query,
+      .tt-hint {
+          outline: none;
+      }
+
+      .tt-query {
+          box-shadow: inset 0 1px 1px rgba(0, 0, 0, 0.075);
+      }
+
+      .tt-hint {
+          color: #999;
+      }
+
+      .tt-menu {
+          width: 100%;
+          margin-top: 12px;
+          padding: 8px 0;
+          background-color: #fff;
+          border: 1px solid #ccc;
+          border: 1px solid rgba(0, 0, 0, 0.2);
+          border-radius: 8px;
+          box-shadow: 0 5px 10px rgba(0, 0, 0, 0.2);
+      }
+
+      .tt-suggestion {
+          padding: 3px 20px;
+      }
+
+      .tt-suggestion.tt-is-under-cursor {
+          color: #fff;
+      }
+
+      .tt-suggestion p {
+          margin: 0;
+      }
     </style>
     {%- endblock styles %}
     {%- endblock head %}
@@ -111,6 +157,15 @@
         crossorigin=""></script>
     <script src="https://unpkg.com/bootstrap@3.4.1/dist/js/bootstrap.min.js"
         integrity="sha384-aJ21OjlMXNL5UyIl/XNwTMqvzeRMZH2w8c5cRVpzpU8Y5bApTppSuUkhZXN0VxHd"
+        crossorigin=""></script>
+    <script src="https://unpkg.com/leaflet@1.6.0/dist/leaflet.js"
+        integrity="sha384-wKOriz2x8/bF1D9t6PuKhSpxfhHeVi9huvyuxJrrShSJpi5+rmRIsM90UuWbdAYJ"
+        crossorigin=""></script>
+    <script src="https://unpkg.com/leaflet-ajax@2.1.0/dist/leaflet.ajax.min.js"
+        integrity="sha384-sKs8ZrrxyJoElcPVznZwGpUTTXvkMYfHYxdIFzO8Hd0TA6emONMj8BwnsFf+6cZ/"
+        crossorigin=""></script>
+    <script src="https://unpkg.com/corejs-typeahead@1.3.0/dist/typeahead.bundle.js"
+        integrity="sha384-+sfLKph2cfn8L+mhfmOMpYHAHi6s6Uzt7cEs7kkV9l0NJRgPteAqKhnvsTnOceV6"
         crossorigin=""></script>
     {%- endblock scripts %}
     {%- endblock body %}

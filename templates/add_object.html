@@ -2,65 +2,8 @@
 
 {% block title %}{{ super() }} - Add New{% endblock %}
 
-{% block styles %}
-{{ super() }}
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.6.0/dist/leaflet.css"
-    integrity="sha384-eS4bw6aEvhCSXWGP85ANR/N8isWKzT7P36NvcuTJGkrj6wsbxLVpXslrNXYHyseD"
-    crossorigin=""/>
-<style>
-    .twitter-typeahead,
-    .tt-hint,
-    .tt-input,
-    .tt-menu {
-        width: 100%;
-    }
-
-    .tt-query,
-    .tt-hint {
-        outline: none;
-    }
-
-    .tt-query {
-        box-shadow: inset 0 1px 1px rgba(0, 0, 0, 0.075);
-    }
-
-    .tt-hint {
-        color: #999;
-    }
-
-    .tt-menu {
-        width: 100%;
-        margin-top: 12px;
-        padding: 8px 0;
-        background-color: #fff;
-        border: 1px solid #ccc;
-        border: 1px solid rgba(0, 0, 0, 0.2);
-        border-radius: 8px;
-        box-shadow: 0 5px 10px rgba(0, 0, 0, 0.2);
-    }
-
-    .tt-suggestion {
-        padding: 3px 20px;
-    }
-
-    .tt-suggestion.tt-is-under-cursor {
-        color: #fff;
-    }
-
-    .tt-suggestion p {
-        margin: 0;
-    }
-</style>
-{% endblock %}
-
 {% block scripts %}
 {{ super() }}
-<script src="https://unpkg.com/leaflet@1.6.0/dist/leaflet.js"
-    integrity="sha384-wKOriz2x8/bF1D9t6PuKhSpxfhHeVi9huvyuxJrrShSJpi5+rmRIsM90UuWbdAYJ"
-    crossorigin=""></script>
-<script src="https://unpkg.com/corejs-typeahead@1.3.0/dist/typeahead.bundle.js"
-    integrity="sha384-+sfLKph2cfn8L+mhfmOMpYHAHi6s6Uzt7cEs7kkV9l0NJRgPteAqKhnvsTnOceV6"
-    crossorigin=""></script>
 <script type="text/javascript">
 let params = new URLSearchParams(location.search);
 var map;

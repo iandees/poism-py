@@ -305,7 +305,7 @@ def presets_json():
             "terms": terms,
         }
 
-    filtered_presets = list(filter(None, map(convert, presets.presets.items())))
+    filtered_presets = list(filter(None, map(convert, presets._presets.items())))
 
     resp = make_response(jsonify(results=filtered_presets, pagination=dict(more=False)))
     resp.cache_control.public = True
@@ -500,6 +500,18 @@ def edit_object(obj_type, obj_id):
     form = PoiForm()
 
     preset = presets.match_by_tags(obj_tags)
+
+    new_preset_name = request.args.get('new_preset')
+    old_preset = None
+    if new_preset_name:
+        new_preset = presets.get_by_id(new_preset_name)
+        if not new_preset:
+            flash("Don't know that new category")
+            return redirect(url_for('edit_object', obj_type=obj_type, obj_id=obj_id))
+
+        old_preset = preset
+        preset = new_preset
+
     fields = []
     if preset:
         fields = preset.get('fields')
@@ -518,6 +530,17 @@ def edit_object(obj_type, obj_id):
 
     if form.validate_on_submit():
         new_obj = copy.deepcopy(obj)
+
+        if old_preset and new_preset:
+            # Need to remove the old preset's tags from the object
+            for k, v in old_preset.get('tags', {}).items():
+                existing_value = new_obj['tags'].get(k)
+                if existing_value == v:
+                    del new_obj['tags'][k]
+            for k, v in old_preset.get('addTags', {}).items():
+                existing_value = new_obj['tags'].get(k)
+                if existing_value == v:
+                    del new_obj['tags'][k]
 
         apply_form_to_tags(new_obj['tags'], fields, form)
 
@@ -547,6 +570,7 @@ def edit_object(obj_type, obj_id):
         form=form,
         obj=obj,
         preset=preset,
+        old_preset=old_preset,
     )
 
 
@@ -561,7 +585,7 @@ def add():
         return redirect(url_for("nearby"))
 
     preset_val = request.args.get("preset")
-    preset = presets.presets.get(preset_val)
+    preset = presets.get_by_id(preset_val)
 
     if preset_val and not preset:
         flash("That preset is not recognized")

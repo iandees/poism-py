@@ -2,26 +2,13 @@
 
 {% block title %}{{ super() }} - Edit {{ obj.get('tags', {}).get('name') or 'A Place' }}{% endblock %}
 
-{% block styles %}
-{{ super() }}
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.6.0/dist/leaflet.css"
-    integrity="sha384-eS4bw6aEvhCSXWGP85ANR/N8isWKzT7P36NvcuTJGkrj6wsbxLVpXslrNXYHyseD"
-    crossorigin=""/>
-{% endblock %}
-
 {% block scripts %}
 {{ super() }}
-<script src="https://unpkg.com/leaflet@1.6.0/dist/leaflet.js"
-    integrity="sha384-wKOriz2x8/bF1D9t6PuKhSpxfhHeVi9huvyuxJrrShSJpi5+rmRIsM90UuWbdAYJ"
-    crossorigin=""></script>
-<script src="https://unpkg.com/leaflet-ajax@2.1.0/dist/leaflet.ajax.min.js"
-    integrity="sha384-sKs8ZrrxyJoElcPVznZwGpUTTXvkMYfHYxdIFzO8Hd0TA6emONMj8BwnsFf+6cZ/"
-    crossorigin=""></script>
 <script type="text/javascript">
     var map;
     var gpsCircle;
 
-    document.addEventListener("DOMContentLoaded", function() {
+    $(document).ready(function() {
         map = new L.Map('map');
 
         var osmUrl = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
@@ -58,6 +45,56 @@
         });
         {%- endif %}
 
+        $("#pick_new_preset").on('click', function(e) {
+            var presetSearcher = new Bloodhound({
+                datumTokenizer: Bloodhound.tokenizers.obj.whitespace("terms"),
+                queryTokenizer: Bloodhound.tokenizers.whitespace,
+                identify: function(o) {
+                    return o.id;
+                },
+                prefetch: {
+                    url: "{{ url_for('presets_json') }}",
+                    cache: false,
+                    prepare: function(settings) {
+                        console.log("prepare", settings);
+                        return settings;
+                    },
+                    transform: function(data) {
+                        console.log("transform");
+                        return data.results;
+                    },
+                },
+            });
+
+            $("#new_preset_typeahead").typeahead({
+                hint: true,
+                highlight: true,
+                minLength: 2,
+            }, {
+                name: 'presets',
+                source: presetSearcher,
+                async: false,
+                display: function(item) {
+                    return item.text;
+                },
+                templates: {
+                    suggestion: function(item) {
+                        return '<div>'+ item.text +'</div>';
+                    },
+                    pending: function (query) {
+                        return '<div>Loading...</div>';
+                    },
+                },
+            });
+
+            $("#new_preset_typeahead").bind("typeahead:select", function(ev, suggestion) {
+                $("#new_preset").val(suggestion.id);
+                console.log("Selected preset " + suggestion.id);
+            });
+
+            $("#new_category").show()
+        });
+
         map.locate({enableHighAccuracy: true, watch: true, maxZoom: 18});
         map.on('locationfound', function(e) {
             var radius = e.accuracy / 2;
@@ -87,8 +124,26 @@
     {% elif preset.icon.startswith('temaki-') %}
     <img width="40" src="https://cdn.jsdelivr.net/gh/bhousel/temaki/icons/{{ preset.icon[7:] }}.svg"/>
     {% endif %}
+
+    {%- if old_preset %}
+    <strike>{{ old_preset.name }}</strike>
     {{ preset.name }}
+    <small><a href="{{ request.base_url }}">(Undo Category Change)</a></small>
+    {%- else %}
+    {{ preset.name }}
+    <button id="pick_new_preset" class="btn btn-default btn-sm" value="Pick New Preset">Change Category</button>
+    {%- endif %}
 </h3>
+
+<div class="well" id="new_category" style="display: none;">
+    <form method="get">
+        <input type="hidden" name="new_preset" id="new_preset" />
+        <div class="form-group">
+            <input type="text" id="new_preset_typeahead" class="form-control"/>
+        </div>
+        <input type="submit" value="Pick New Preset" class="btn btn-default"/>
+    </form>
+</div>
 
 <form method="post">
     {{ form.hidden_tag() }}
