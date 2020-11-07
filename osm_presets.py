@@ -4,12 +4,12 @@ import requests
 
 class OSMPresets(object):
     def __init__(self, app=None):
-        self.presets = None
+        self._presets = None
 
     def load_presets(self):
-        resp = requests.get('https://raw.githubusercontent.com/openstreetmap/iD/master/data/presets/presets.json')
+        resp = requests.get('https://raw.githubusercontent.com/openstreetmap/iD/develop/data/presets/presets.json')
         resp.raise_for_status()
-        self.presets = resp.json().get('presets')
+        self._presets = resp.json()
 
     def _resolve_references(self, path, preset):
         """ Popuate implied presets and referential relationships. """
@@ -24,7 +24,7 @@ class OSMPresets(object):
                     break
 
                 parent_preset_name = path_parts[0]
-                parent_preset = self.presets.get(parent_preset_name)
+                parent_preset = self._presets.get(parent_preset_name)
                 if parent_preset:
                     parent_fields = parent_preset.get('fields', [])
                     fields.extend(parent_fields)
@@ -35,7 +35,7 @@ class OSMPresets(object):
         # Fields with {} surrounding the name should be replaced with the fields from the named preset
         for i, p in enumerate(fields):
             if p[0] == '{' and p[-1] == '}':
-                referred_preset = self.presets.get(p[1:-1])
+                referred_preset = self._presets.get(p[1:-1])
                 if referred_preset:
                     del fields[i]
                     fields[i:i] = referred_preset['fields']
@@ -43,10 +43,18 @@ class OSMPresets(object):
         preset['fields'] = fields
         return preset
 
+    def get_by_id(self, id):
+        match = self._presets.get(id)
+
+        if match:
+            match = self._resolve_references(id, match)
+
+        return match
+
     def match_by_tags(self, tags):
         candidates = []
 
-        for preset_name, preset_data in self.presets.items():
+        for preset_name, preset_data in self._presets.items():
             candidate_tags = preset_data.get('tags')
             candidate_points = 0
 
