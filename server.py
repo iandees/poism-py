@@ -295,13 +295,15 @@ def presets_json():
         if 'point' not in data.get('geometry', []):
             return None
 
-        terms = data.get('terms') or []
-        terms.insert(0, data.get('name').lower())
+        names = presets._names.get(name)
+        terms = (names.get('terms') or '').split(',')
+        terms.insert(0, names.get('name').lower())
+        terms = ' '.join(set(filter(None, terms)))
 
         return {
             "icon": data.get("icon"),
             "id": name,
-            "text": data.get("name"),
+            "text": names.get("name"),
             "terms": terms,
         }
 

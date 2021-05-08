@@ -14,7 +14,7 @@ class OSMPresets(object):
 
         resp = requests.get('https://raw.githubusercontent.com/openstreetmap/id-tagging-schema/main/dist/translations/en.min.json')
         resp.raise_for_status()
-        self._names = resp.json()
+        self._names = resp.json()['en']['presets']['presets']
 
     def _resolve_references(self, path, preset):
         """ Popuate implied presets and referential relationships. """
@@ -78,7 +78,7 @@ class OSMPresets(object):
         if candidates:
             points, name, data = sorted(candidates, key=lambda i: i[0], reverse=True)[0]
             data = self._resolve_references(name, data)
-            data['name'] = self._names['en']['presets']['presets'].get(name)['name']
+            data['name'] = self._names.get(name)['name']
             return data
         else:
             return None
