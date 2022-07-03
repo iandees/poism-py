@@ -8,9 +8,14 @@ class OSMPresets(object):
         self._names = None
 
     def load_presets(self):
-        resp = requests.get('https://raw.githubusercontent.com/openstreetmap/id-tagging-schema/main/dist/presets.min.json')
+        resp = requests.get('https://raw.githubusercontent.com/openstreetmap/id-tagging-schema/main/dist/presets.min.json', timeout=15.0)
         resp.raise_for_status()
         self._presets = resp.json()
+
+        resp = requests.get('https://raw.githubusercontent.com/osmlab/name-suggestion-index/main/dist/presets/nsi-id-presets.min.json', timeout=15.0)
+        resp.raise_for_status()
+        nsi_presets = resp.json()['presets']
+        self._presets.update(nsi_presets)
 
         resp = requests.get('https://raw.githubusercontent.com/openstreetmap/id-tagging-schema/main/dist/translations/en.min.json')
         resp.raise_for_status()
@@ -78,7 +83,8 @@ class OSMPresets(object):
         if candidates:
             points, name, data = sorted(candidates, key=lambda i: i[0], reverse=True)[0]
             data = self._resolve_references(name, data)
-            data['name'] = self._names.get(name)['name']
+            if not data.get('name'):
+                data['name'] = self._names.get(name).get('name')
             return copy.deepcopy(data)
         else:
             return None

@@ -117,7 +117,9 @@
 <div id="map" class="col-xs-12" style="height: 380px; margin-bottom: 20px;"></div>
 
 <h3>
-    {% if preset.icon.startswith('maki-') %}
+    {% if preset.imageURL %}
+    <img width="40" src="{{ preset.imageURL }}"/>
+    {% elif preset.icon.startswith('maki-') %}
     <img width="40" src="https://cdn.jsdelivr.net/gh/mapbox/maki/icons/{{ preset.icon[5:] }}-15.svg"/>
     {% elif preset.icon.startswith('fas-') %}
     <img width="40" src="https://cdn.jsdelivr.net/gh/openstreetmap/iD@master/svg/fontawesome/{{ preset.icon }}.svg"/>
