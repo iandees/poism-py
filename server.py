@@ -9,7 +9,7 @@ from wtforms import StringField, SubmitField
 from haversine import haversine
 from osm_presets import OSMPresets
 from werkzeug.middleware.proxy_fix import ProxyFix
-from requests_oauthlib import OAuth1Session
+from requests_oauthlib import OAuth2Session
 
 
 app = Flask(__name__)
@@ -21,9 +21,8 @@ app.config.update(
 app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1)
 Bootstrap(app)
 
-request_token_url = 'https://www.openstreetmap.org/oauth/request_token'
-access_token_url = 'https://www.openstreetmap.org/oauth/access_token'
-authorize_url = 'https://www.openstreetmap.org/oauth/authorize'
+authorize_url = 'https://www.openstreetmap.org/oauth2/authorize'
+token_url = 'https://www.openstreetmap.org/oauth2/token'
 api_base_url = 'https://api.openstreetmap.org/api/0.6/'
 
 presets = OSMPresets()
@@ -54,34 +53,32 @@ def index():
 
 @app.route('/login')
 def login():
-    osm = OAuth1Session(
-        app.config.get('OSM_CLIENT_ID'),
-        client_secret=app.config.get('OSM_CLIENT_SECRET'),
-        callback_uri=url_for('authorize', _external=True),
+    osm_auth = OAuth2Session(
+        client_id=app.config.get('OSM_CLIENT_ID'),
+        scope=['read_prefs', 'write_api'],
+        redirect_uri=url_for('authorize', _external=True),
     )
+    authorization_url, state = osm_auth.authorization_url(authorize_url)
 
-    req_token = osm.fetch_request_token(request_token_url)
-    session['oauth_params'] = req_token
-
-    auth_url = osm.authorization_url(authorize_url)
-    return redirect(auth_url)
+    session['oauth_state'] = state
+    return redirect(authorization_url)
 
 
 @app.route('/authorize')
 def authorize():
-    osm = OAuth1Session(
-        app.config.get('OSM_CLIENT_ID'),
-        client_secret=app.config.get('OSM_CLIENT_SECRET'),
-        resource_owner_key=session['oauth_params']['oauth_token'],
-        resource_owner_secret=session['oauth_params']['oauth_token_secret'],
+    osm_auth = OAuth2Session(
+        client_id=app.config.get('OSM_CLIENT_ID'),
+        redirect_uri=url_for('authorize', _external=True),
+        state=session['oauth_state'],
     )
+    token = osm_auth.fetch_token(
+        token_url=token_url,
+        client_secret=app.config.get('OSM_CLIENT_SECRET'),
+        authorization_response=request.url,
+    )
+    session['oauth_params'] = token
 
-    osm.parse_authorization_response(request.url)
-    app.logger.info("OSM token in authorize %s", osm.token)
-    osm.fetch_access_token(access_token_url)
-    session['oauth_params'] = osm.token
-
-    userreq = osm.get('https://api.openstreetmap.org/api/0.6/user/details')
+    userreq = osm_auth.get('https://api.openstreetmap.org/api/0.6/user/details')
     root = ET.fromstring(userreq.text)
     user_name = root[0].attrib['display_name']
     session['user_name'] = user_name
@@ -234,11 +231,10 @@ def open_changeset():
     created_by_elem.attrib['v'] = 'Modifying a point of interest'
     cs_text = ET.tostring(root, encoding='unicode')
 
-    osm = OAuth1Session(
-        client_key=app.config.get('OSM_CLIENT_ID'),
-        client_secret=app.config.get('OSM_CLIENT_SECRET'),
+    osm = OAuth2Session(
+        client_id=app.config.get('OSM_CLIENT_ID'),
+        token=session['oauth_params'],
     )
-    osm.token = session['oauth_params']
 
     resp = osm.put(api_base_url + 'changeset/create', data=cs_text, headers={'Content-Type': 'text/xml'})
     app.logger.info("Response from changeset create: %s", resp.text)
@@ -259,11 +255,10 @@ def apply_change(new_obj, action, changeset_id):
     osc_text = ET.tostring(root, encoding='unicode')
     app.logger.info("Applying change: %s", osc_text)
 
-    osm = OAuth1Session(
-        client_key=app.config.get('OSM_CLIENT_ID'),
-        client_secret=app.config.get('OSM_CLIENT_SECRET'),
+    osm = OAuth2Session(
+        client_id=app.config.get('OSM_CLIENT_ID'),
+        token=session['oauth_params'],
     )
-    osm.token = session['oauth_params']
 
     resp = osm.post(api_base_url + 'changeset/{}/upload'.format(changeset_id), data=osc_text, headers={'Content-Type': 'text/xml'})
     app.logger.info("Response from changeset upload: %s", resp.text)
