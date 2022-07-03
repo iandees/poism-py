@@ -79,7 +79,7 @@ class OSMPresets(object):
             points, name, data = sorted(candidates, key=lambda i: i[0], reverse=True)[0]
             data = self._resolve_references(name, data)
             data['name'] = self._names.get(name)['name']
-            return data
+            return copy.deepcopy(data)
         else:
             return None
 
