@@ -279,10 +279,10 @@ def apply_change(new_obj, action, changeset_id):
 def presets_json():
     def convert(kv):
         name, data = kv
-        if not (name.startswith("amenity/") or \
-            name.startswith("craft/") or \
-            name.startswith("leisure/") or \
-            name.startswith("shop/") or \
+        if not (name.startswith("amenity/") or
+            name.startswith("craft/") or
+            name.startswith("leisure/") or
+            name.startswith("shop/") or
             name.startswith("tourism/")):
 
             return None
@@ -290,15 +290,18 @@ def presets_json():
         if 'point' not in data.get('geometry', []):
             return None
 
-        names = presets._names.get(name)
-        terms = (names.get('terms') or '').split(',')
-        terms.insert(0, names.get('name').lower())
+        preset_name = data.get('name')
+        if not preset_name:
+            name_info = presets._names.get(name)
+            preset_name = name_info.get('name')
+
+        terms = data.get('terms') or []
+        terms.insert(0, preset_name.lower())
         terms = ' '.join(set(filter(None, terms)))
 
         return {
-            "icon": data.get("icon"),
             "id": name,
-            "text": names.get("name"),
+            "text": preset_name,
             "terms": terms,
         }
 
