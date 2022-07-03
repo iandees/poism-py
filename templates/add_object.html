@@ -13,7 +13,7 @@ var gpsCircle;
 $(document).ready(function() {
     map = new L.Map('map');
 
-    var osmUrl = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
+    var osmUrl = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
     var osmAttrib = 'Map data © <a href="https://www.openstreetmap.org">OpenStreetMap</a> contributors';
     var osm = new L.TileLayer(osmUrl, {
         minZoom: 8,
