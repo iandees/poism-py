@@ -1,4 +1,5 @@
 import copy
+import logging
 import os
 import requests
 import xml.etree.ElementTree as ET
@@ -19,6 +20,7 @@ app.config.update(
     OSM_CLIENT_SECRET=os.environ.get('OSM_CLIENT_SECRET'),
 )
 app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1)
+app.logger.setLevel(logging.INFO)
 Bootstrap(app)
 
 authorize_url = 'https://www.openstreetmap.org/oauth2/authorize'
