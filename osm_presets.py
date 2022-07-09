@@ -59,7 +59,7 @@ class OSMPresets(object):
         if match:
             match = self._resolve_references(id, match)
 
-        return match
+        return copy.deepcopy(match)
 
     def match_by_tags(self, tags):
         candidates = []
