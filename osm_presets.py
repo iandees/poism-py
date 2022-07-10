@@ -58,6 +58,8 @@ class OSMPresets(object):
 
         if match:
             match = self._resolve_references(id, match)
+            if not match.get('name'):
+                match['name'] = self._names.get(id).get('name')
 
         return copy.deepcopy(match)
 

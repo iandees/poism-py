@@ -533,7 +533,7 @@ def edit_object(obj_type, obj_id):
     if form.validate_on_submit():
         new_obj = copy.deepcopy(obj)
 
-        if old_preset and new_preset:
+        if old_preset and preset:
             # Need to remove the old preset's tags from the object
             for k, v in old_preset.get('tags', {}).items():
                 existing_value = new_obj['tags'].get(k)
@@ -543,6 +543,13 @@ def edit_object(obj_type, obj_id):
                 existing_value = new_obj['tags'].get(k)
                 if existing_value == v:
                     del new_obj['tags'][k]
+
+        if preset:
+            # Apply the preset tags to the object
+            for k, v in preset.get('tags', {}).items():
+                new_obj['tags'][k] = v
+            for k, v in preset.get('addTags', {}).items():
+                new_obj['tags'][k] = v
 
         apply_form_to_tags(new_obj['tags'], fields, form)
 
@@ -565,7 +572,8 @@ def edit_object(obj_type, obj_id):
 
             apply_change(new_obj, 'modify', changeset_id)
 
-        obj = new_obj
+        flash("Saved change to OpenStreetMap")
+        return redirect(url_for('edit_object', obj_type=new_obj['type'], obj_id=new_obj['id']))
 
     return render_template(
         'edit_object.html',
