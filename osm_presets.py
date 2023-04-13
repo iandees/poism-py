@@ -22,7 +22,7 @@ class OSMPresets(object):
         self._names = resp.json()['en']['presets']['presets']
 
     def _resolve_references(self, path, preset):
-        """ Popuate implied presets and referential relationships. """
+        """ Populate implied presets and referential relationships. """
         fields = preset.get('fields', [])
 
         # Presets with no 'fields' attribute should pull their fields from the parent preset.
@@ -76,6 +76,8 @@ class OSMPresets(object):
                     candidate_points += 1
                     if tag_v == candidate_v:
                         candidate_points += 1
+                    else:
+                        candidate_points -= 1
                 else:
                     candidate_points -= 1
 
@@ -96,25 +98,6 @@ if __name__ == "__main__":
     p = OSMPresets()
     p.load_presets()
 
-    test_tags = {
-        "addr:city": "Saint Paul",
-        "addr:housenumber": "755",
-        "addr:postcode": "55104",
-        "addr:state": "MN",
-        "addr:street": "North Prior Avenue",
-        "craft": "brewery",
-        "email": "info@blackstackbrewing.com",
-        "name": "BlackStack Brewing",
-        "opening_hours": "Mo-Th 08:00-23:00; Fr 08:00-00:00; Sa 09:00-00:00; Su 09:00-22:00",
-        "phone": "+1-612-369-2932",
-        "website": "https://www.blackstackbrewing.com/",
-    }
-    print(p.match_by_tags(test_tags))
-
-    test_tags = {
-        "amenity": "theatre",
-        "building": "yes",
-        "name": "Celtic Junction",
-        "type": "multipolygon",
-    }
+    resp = requests.get("https://poism.dev.openstreetmap.us/node/6918736677.geojson")
+    test_tags = resp.json().get("properties").get("tags")
     print(p.match_by_tags(test_tags))
