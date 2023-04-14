@@ -136,7 +136,7 @@ def get_pois_around(lat, lon, radius):
     # Simplify the OSM/Overpass results into something consistent
     results = [translate(o) for o in data['elements']]
     # Sort the results by distance from center
-    results.sort(key=lambda i: haversine((lat, lon), i['center']))
+    results.sort(key=lambda i: haversine((lat, lon), (i['center'][1], i['center'][0])))
 
     return results
 
