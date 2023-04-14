@@ -231,7 +231,7 @@ def open_changeset():
     created_by_elem = ET.SubElement(cs_elem, 'tag')
     created_by_elem.attrib['k'] = 'comment'
     created_by_elem.attrib['v'] = 'Modifying a point of interest'
-    cs_text = ET.tostring(root, encoding='unicode')
+    cs_text = ET.tostring(root, encoding='utf-8')
 
     osm = OAuth2Session(
         client_id=app.config.get('OSM_CLIENT_ID'),
@@ -254,7 +254,7 @@ def apply_change(new_obj, action, changeset_id):
     obj_elem = obj_to_xml(new_obj)
     obj_elem.attrib['changeset'] = str(changeset_id)
     modify_elem.append(obj_elem)
-    osc_text = ET.tostring(root, encoding='unicode')
+    osc_text = ET.tostring(root, encoding='utf-8')
     app.logger.info("Applying change: %s", osc_text)
 
     osm = OAuth2Session(
