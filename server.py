@@ -297,6 +297,16 @@ def presets_json():
             name_info = presets._names.get(name)
             preset_name = name_info.get('name')
 
+        icon_url = None
+        if data.get("imageURL"):
+            icon_url = data.get("imageURL")
+        elif data.get("icon").startswith("maki-"):
+            icon_url = f"https://cdn.jsdelivr.net/gh/mapbox/maki/icons/{{ data.get('icon')[5:] }}-15.svg"
+        elif data.get("icon").startswith('fas-'):
+            icon_url = f"https://cdn.jsdelivr.net/gh/openstreetmap/iD@master/svg/fontawesome/{{ data.get('icon') }}.svg"
+        elif data.get("icon").startswith('temaki-'):
+            icon_url = f"https://cdn.jsdelivr.net/gh/bhousel/temaki/icons/{{ data.get('icon')[7:] }}.svg"
+
         terms = data.get('terms') or []
         terms.insert(0, preset_name.lower())
         terms = ' '.join(set(filter(None, terms)))
@@ -304,6 +314,7 @@ def presets_json():
         return {
             "id": name,
             "text": preset_name,
+            "icon": icon_url,
             "terms": terms,
         }
 
