@@ -300,12 +300,13 @@ def presets_json():
         icon_url = None
         if data.get("imageURL"):
             icon_url = data.get("imageURL")
-        elif data.get("icon").startswith("maki-"):
-            icon_url = f"https://cdn.jsdelivr.net/gh/mapbox/maki/icons/{{ data.get('icon')[5:] }}-15.svg"
-        elif data.get("icon").startswith('fas-'):
-            icon_url = f"https://cdn.jsdelivr.net/gh/openstreetmap/iD@master/svg/fontawesome/{{ data.get('icon') }}.svg"
-        elif data.get("icon").startswith('temaki-'):
-            icon_url = f"https://cdn.jsdelivr.net/gh/bhousel/temaki/icons/{{ data.get('icon')[7:] }}.svg"
+        elif icon := data.get("icon"):
+            if icon.startswith("maki-"):
+                icon_url = f"https://cdn.jsdelivr.net/gh/mapbox/maki/icons/{{ icon[5:] }}-15.svg"
+            elif icon.startswith('fas-'):
+                icon_url = f"https://cdn.jsdelivr.net/gh/openstreetmap/iD@master/svg/fontawesome/{{ icon }}.svg"
+            elif icon.startswith('temaki-'):
+                icon_url = f"https://cdn.jsdelivr.net/gh/bhousel/temaki/icons/{{ icon[7:] }}.svg"
 
         terms = data.get('terms') or []
         terms.insert(0, preset_name.lower())
