@@ -297,6 +297,23 @@ def presets_json():
             name_info = presets._names.get(name)
             preset_name = name_info.get('name')
 
+        terms = data.get('terms') or []
+        terms.insert(0, preset_name.lower())
+        terms = ' '.join(set(filter(None, terms)))
+
+        converted = {
+            "id": name,
+            "text": preset_name,
+            "terms": terms,
+        }
+
+        name_split = name.split("/")
+        if len(name_split) == 3 and '-' in name_split[-1]:
+            brand_name_removed = '/'.join(name_split[:2])
+            subtitle_name_info = presets._names.get(brand_name_removed)
+            subtitle_text = subtitle_name_info.get('name')
+            converted['sub'] = subtitle_text
+
         icon_url = None
         if data.get("imageURL"):
             icon_url = data.get("imageURL")
@@ -308,16 +325,10 @@ def presets_json():
             elif icon.startswith('temaki-'):
                 icon_url = f"https://cdn.jsdelivr.net/gh/bhousel/temaki/icons/{ icon[7:] }.svg"
 
-        terms = data.get('terms') or []
-        terms.insert(0, preset_name.lower())
-        terms = ' '.join(set(filter(None, terms)))
+        if icon_url:
+            converted['icon'] = icon_url
 
-        return {
-            "id": name,
-            "text": preset_name,
-            "icon": icon_url,
-            "terms": terms,
-        }
+        return converted
 
     filtered_presets = list(filter(None, map(convert, presets._presets.items())))
 

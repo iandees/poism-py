@@ -93,7 +93,21 @@ $(document).ready(function() {
         },
         templates: {
             suggestion: function(item) {
-                return '<div>'+ item.text +'</div>';
+                let text = "<div>";
+
+                if (item.icon) {
+                    text += `&nbsp;<img src="${item.icon}" width="20px"/>`;
+                }
+
+                text += `&nbsp;${item.text}`;
+
+                if (item.sub) {
+                    text += `&nbsp;<span style="font-size: smaller;"><em>(${item.sub})</em></span>`;
+                }
+
+                text += "</div>";
+
+                return text;
             },
             pending: function (query) {
                 return '<div>Loading...</div>';
